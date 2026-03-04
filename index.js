@@ -12,7 +12,7 @@ const client = new Client({
 
 const ROL_ID = "784521679731687474";
 const cooldown = new Map();
-const DOS_HORAS = 2 * 60 * 60 * 1000;
+const UNA_HORA = 1 * 60 * 60 * 1000; // 🔥 1 hora
 
 client.once('ready', () => {
   console.log(`✅ Bot conectado como ${client.user.tag}`);
@@ -26,7 +26,7 @@ client.on('messageCreate', message => {
   const ahora = Date.now();
   const ultimoMensaje = cooldown.get(message.author.id);
 
-  if (!ultimoMensaje || ahora - ultimoMensaje > DOS_HORAS) {
+  if (!ultimoMensaje || ahora - ultimoMensaje > UNA_HORA) {
     message.reply("CALLA HOMOSEXUAL");
     cooldown.set(message.author.id, ahora);
   }
@@ -34,7 +34,7 @@ client.on('messageCreate', message => {
 
 // 🔥 Diagnóstico del TOKEN
 if (!process.env.TOKEN) {
-  console.log("❌ TOKEN no detectado en Render");
+  console.log("❌ TOKEN no detectado en el entorno");
 } else {
   console.log("✅ TOKEN detectado");
 }
@@ -50,7 +50,7 @@ client.login(process.env.TOKEN)
     console.error(err);
   });
 
-// 🌐 Servidor web para Render
+// 🌐 Servidor web
 const app = express();
 
 app.get("/", (req, res) => {
