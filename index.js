@@ -11,6 +11,8 @@ const client = new Client({
 });
 
 const ROL_ID = "784521679731687474";
+const cooldown = new Map();
+const UNA_HORA = 1 * 60 * 60 * 1000;
 
 // 🔥 Bot listo
 client.once('clientReady', () => {
@@ -20,9 +22,11 @@ client.once('clientReady', () => {
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
 
-  // ===== COMANDO !decir =====
-  if (message.content.startsWith("!cagada")) {
-    const texto = message.content.slice(7).trim();
+  // ===== COMANDO !cagada (SIN COOLDOWN) =====
+  const prefijo = "!cagada";
+
+  if (message.content.startsWith(prefijo)) {
+    const texto = message.content.slice(prefijo.length).trim();
     if (!texto) return;
 
     try {
@@ -40,14 +44,20 @@ client.on('messageCreate', async message => {
       console.error("Error usando webhook:", error);
     }
 
-    return;
+    return; // 🔥 IMPORTANTE
   }
 
-  // ===== SISTEMA POR ROL (SIN COOLDOWN) =====
+  // ===== SISTEMA POR ROL (CON COOLDOWN DE 1 HORA) =====
   if (!message.member) return;
   if (!message.member.roles.cache.has(ROL_ID)) return;
 
-  message.reply("CALLA HOMOSEXUAL");
+  const ahora = Date.now();
+  const ultimoMensaje = cooldown.get(message.author.id);
+
+  if (!ultimoMensaje || ahora - ultimoMensaje > UNA_HORA) {
+    message.reply("CALLATE HOMOSEXUAL");
+    cooldown.set(message.author.id, ahora);
+  }
 });
 
 // 🔥 Verificación de token
