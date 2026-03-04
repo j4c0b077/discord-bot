@@ -1,4 +1,5 @@
 const { Client, GatewayIntentBits } = require('discord.js');
+const express = require("express");
 
 const client = new Client({
   intents: [
@@ -19,6 +20,7 @@ client.on('ready', () => {
 
 client.on('messageCreate', message => {
   if (message.author.bot) return;
+  if (!message.member) return;
   if (!message.member.roles.cache.has(ROL_ID)) return;
 
   const ahora = Date.now();
@@ -37,17 +39,18 @@ if (!process.env.TOKEN) {
   console.log("✅ TOKEN detectado");
 }
 
-// 🔥 Login con error detallado
+console.log("🔄 Intentando iniciar sesión...");
+
 client.login(process.env.TOKEN)
   .then(() => {
-    console.log("🔄 Intentando iniciar sesión...");
+    console.log("✅ Login exitoso");
   })
   .catch(err => {
-    console.error("❌ ERROR REAL AL HACER LOGIN:");
+    console.error("❌ ERROR AL HACER LOGIN:");
     console.error(err);
   });
 
-const express = require("express");
+// 🌐 Servidor web para Render
 const app = express();
 
 app.get("/", (req, res) => {
