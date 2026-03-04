@@ -11,28 +11,46 @@ const client = new Client({
 });
 
 const ROL_ID = "784521679731687474";
-const cooldown = new Map();
-const UNA_HORA = 1 * 60 * 60 * 1000; // 🔥 1 hora
 
-client.once('ready', () => {
+// 🔥 Bot listo
+client.once('clientReady', () => {
   console.log(`✅ Bot conectado como ${client.user.tag}`);
 });
 
-client.on('messageCreate', message => {
+client.on('messageCreate', async message => {
   if (message.author.bot) return;
+
+  // ===== COMANDO !decir =====
+  if (message.content.startsWith("!cagada")) {
+    const texto = message.content.slice(7).trim();
+    if (!texto) return;
+
+    try {
+      await message.delete();
+
+      const webhook = await message.channel.createWebhook({
+        name: client.user.username,
+        avatar: client.user.displayAvatarURL()
+      });
+
+      await webhook.send({ content: texto });
+      await webhook.delete();
+
+    } catch (error) {
+      console.error("Error usando webhook:", error);
+    }
+
+    return;
+  }
+
+  // ===== SISTEMA POR ROL (SIN COOLDOWN) =====
   if (!message.member) return;
   if (!message.member.roles.cache.has(ROL_ID)) return;
 
-  const ahora = Date.now();
-  const ultimoMensaje = cooldown.get(message.author.id);
-
-  if (!ultimoMensaje || ahora - ultimoMensaje > UNA_HORA) {
-    message.reply("CALLA HOMOSEXUAL");
-    cooldown.set(message.author.id, ahora);
-  }
+  message.reply("CALLA HOMOSEXUAL");
 });
 
-// 🔥 Diagnóstico del TOKEN
+// 🔥 Verificación de token
 if (!process.env.TOKEN) {
   console.log("❌ TOKEN no detectado en el entorno");
 } else {
@@ -50,7 +68,7 @@ client.login(process.env.TOKEN)
     console.error(err);
   });
 
-// 🌐 Servidor web
+// 🌐 Servidor web (para Railway)
 const app = express();
 
 app.get("/", (req, res) => {
