@@ -66,7 +66,7 @@ client.on('messageCreate', async message => {
             description:
               "━━━━━━━━━━━━━━━━━━\n" +
               `**Plataformas:** ${plataformas}\n\n` +
-              `**Rating:** ⭐ ${game.rating}\n\n` +
+              `**Rating:** ⭐ ${game.rating}/5\n\n` +
               `**Lanzamiento:** 📅 ${game.released}\n\n` +
               `**Géneros:** 🎯 ${generos}\n` +
               "━━━━━━━━━━━━━━━━━━",
