@@ -140,7 +140,7 @@ client.on('messageCreate', async message => {
 // 🔵 COMANDO !fortnite
 // =========================
 
-if (message.content.startsWith("!fortnite")) {
+if (message.content.toLowerCase().startsWith("!fortnite")) {
 
   const jugador = message.content.slice(9).trim();
 
@@ -150,45 +150,15 @@ if (message.content.startsWith("!fortnite")) {
 
   try {
 
-    let data = null;
-    let plataforma = "";
+    const res = await axios.get(
+      `https://fortnite-api.com/v2/stats/br/v2?name=${encodeURIComponent(jugador)}`
+    );
 
-    const plataformas = [
-      { api: "epic", nombre: "💻 PC" },
-      { api: "psn", nombre: "🎮 PlayStation" },
-      { api: "xbl", nombre: "🟢 Xbox" }
-    ];
-
-    for (const p of plataformas) {
-
-      try {
-
-        const res = await axios.get(
-          "https://fortnite-api.com/v2/stats/br/v2",
-          {
-            params: {
-              name: jugador,
-              accountType: p.api
-            }
-          }
-        );
-
-        if (res.data && res.data.data) {
-          data = res.data.data;
-          plataforma = p.nombre;
-          break;
-        }
-
-      } catch (err) {
-        continue;
-      }
-
+    if (!res.data || !res.data.data) {
+      return message.reply("❌ No encontré ese jugador.");
     }
 
-    if (!data) {
-      return message.reply("❌ No encontré ese jugador o no tiene estadísticas públicas.");
-    }
-
+    const data = res.data.data;
     const stats = data.stats.all.overall;
 
     const winrate = stats.matches > 0
@@ -206,7 +176,6 @@ if (message.content.startsWith("!fortnite")) {
 
         description:
         "━━━━━━━━━━━━━━━━━━\n" +
-        `🖥️ **Plataforma:** ${plataforma}\n\n` +
         `🏆 **Victorias:** ${stats.wins}\n\n` +
         `🎮 **Partidas:** ${stats.matches}\n\n` +
         `⚔️ **Kills:** ${stats.kills}\n\n` +
@@ -224,7 +193,7 @@ if (message.content.startsWith("!fortnite")) {
   } catch (error) {
 
     console.log(error.message);
-    message.reply("⚠️ Error obteniendo estadísticas.");
+    message.reply("⚠️ No pude obtener estadísticas de ese jugador.");
 
   }
 
