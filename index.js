@@ -138,77 +138,76 @@ client.on('messageCreate', async message => {
   }
 
   // =========================
-  // 🔵 COMANDO !fortnite
-  // =========================
+// 🔵 COMANDO !fortnite
+// =========================
 
-  if (message.content.toLowerCase().startsWith("!fortnite")) {
+if (message.content.toLowerCase().startsWith("!fortnite")) {
 
-    const jugador = message.content.slice(9).trim();
+  const jugador = message.content.slice(9).trim();
 
-    if (!jugador) {
-      return message.reply("Ejemplo: !fortnite Ninja");
-    }
-
-    try {
-
-      const res = await axios.get(
-        `https://fortniteapi.io/v1/stats?username=${encodeURIComponent(jugador)}`,
-        {
-          headers: {
-            Authorization: FORTNITE_API_KEY
-          }
-        }
-      );
-
-      if (!res.data || !res.data.global_stats) {
-        return message.reply("❌ No encontré ese jugador.");
-      }
-
-      const stats = res.data.global_stats;
-
-      const wins = stats.wins;
-      const matches = stats.matches;
-      const kills = stats.kills;
-      const kd = stats.kd;
-
-      const winrate = matches > 0
-        ? ((wins / matches) * 100).toFixed(1)
-        : "0";
-
-      const avatar = `https://api.dicebear.com/7.x/bottts/png?seed=${encodeURIComponent(jugador)}`;
-
-      await message.channel.send({
-
-        embeds: [{
-          color: 0x3498DB,
-          title: `📊 ${jugador}`,
-          thumbnail: { url: avatar },
-
-          description:
-          "━━━━━━━━━━━━━━━━━━\n" +
-          `🏆 **Victorias:** ${wins}\n\n` +
-          `🎮 **Partidas:** ${matches}\n\n` +
-          `⚔️ **Kills:** ${kills}\n\n` +
-          `🎯 **K/D:** ${kd}\n\n` +
-          `📈 **Winrate:** ${winrate}%\n` +
-          "━━━━━━━━━━━━━━━━━━",
-
-          footer: { text: "Estadísticas de Fortnite" }
-
-        }]
-
-      });
-
-    } catch (error) {
-
-      console.log(error.response?.data || error.message);
-      message.reply("⚠️ No pude obtener estadísticas de ese jugador.");
-
-    }
-
-    return;
+  if (!jugador) {
+    return message.reply("Ejemplo: !fortnite Ninja");
   }
 
+  try {
+
+    const res = await axios.get(
+      `https://fortniteapi.io/v1/stats?username=${encodeURIComponent(jugador)}&platform=epic`,
+      {
+        headers: {
+          Authorization: process.env.FORTNITE_API_KEY
+        }
+      }
+    );
+
+    if (!res.data || !res.data.global_stats) {
+      return message.reply("❌ No encontré ese jugador.");
+    }
+
+    const stats = res.data.global_stats;
+
+    const wins = stats.wins;
+    const matches = stats.matches;
+    const kills = stats.kills;
+    const kd = stats.kd;
+
+    const winrate = matches > 0
+      ? ((wins / matches) * 100).toFixed(1)
+      : "0";
+
+    const avatar = `https://api.dicebear.com/7.x/bottts/png?seed=${encodeURIComponent(jugador)}`;
+
+    await message.channel.send({
+
+      embeds: [{
+        color: 0x3498DB,
+        title: `📊 ${jugador}`,
+        thumbnail: { url: avatar },
+
+        description:
+        "━━━━━━━━━━━━━━━━━━\n" +
+        `🏆 **Victorias:** ${wins}\n\n` +
+        `🎮 **Partidas:** ${matches}\n\n` +
+        `⚔️ **Kills:** ${kills}\n\n` +
+        `🎯 **K/D:** ${kd}\n\n` +
+        `📈 **Winrate:** ${winrate}%\n` +
+        "━━━━━━━━━━━━━━━━━━",
+
+        footer: { text: "Estadísticas de Fortnite" }
+
+      }]
+
+    });
+
+  } catch (error) {
+
+    console.log(error.response?.data || error.message);
+    message.reply("⚠️ No pude obtener estadísticas de ese jugador.");
+
+  }
+
+  return;
+}
   // =========================
   // 🌐 COMANDO !servidores
   // =========================
