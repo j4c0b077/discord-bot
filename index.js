@@ -18,52 +18,57 @@ const cooldown = new Map();
 const UNA_HORA = 1 * 60 * 60 * 1000;
 
 // =========================
-// 🟢 DETECTOR DE ACTUALIZACIONES
+// 🟢 DETECTOR DE ACTUALIZACIONES REALES
 // =========================
 
 const FORTNITE_CHANNEL_ID = "1298008832471208008";
 const FORTNITE_ROLE_ID = "964381722173116446";
 
-let lastNewsHash = null;
+let lastStatus = null;
 
-async function checkFortniteNews() {
+async function checkFortniteUpdate() {
 
   try {
 
-    const response = await axios.get("https://fortnite-api.com/v2/news");
-    const data = response.data.data.br;
+    const res = await axios.get("https://status.epicgames.com/api/v2/components.json");
 
-    const newHash = data.hash;
+    const components = res.data.components;
 
-    if (!lastNewsHash) {
-      lastNewsHash = newHash;
+    const fortnite = components.find(c => c.name === "Fortnite");
+
+    if (!fortnite) return;
+
+    const estado = fortnite.status;
+
+    if (!lastStatus) {
+      lastStatus = estado;
       return;
     }
 
-    if (newHash !== lastNewsHash) {
+    // Detecta cuando Fortnite entra en mantenimiento (update real)
+    if (estado !== lastStatus && estado === "major_outage") {
 
       const channel = client.channels.cache.get(FORTNITE_CHANNEL_ID);
       if (!channel) return;
 
-      const noticia = data.motds[0];
-
       await channel.send({
-        content: `<@&${FORTNITE_ROLE_ID}> 🚨 **Nueva actualización de Fortnite**`,
+        content: `<@&${FORTNITE_ROLE_ID}> 🚨 **Fortnite está en actualización**`,
         embeds: [{
           color: 0x2ECC71,
-          title: noticia.title,
-          description: noticia.body,
-          image: { url: noticia.image },
-          footer: { text: "Actualización detectada automáticamente" }
+          title: "⚙️ Actualización detectada",
+          description:
+            "Los servidores de Fortnite entraron en mantenimiento.\n" +
+            "Probablemente hay **nuevo parche o temporada**.",
+          footer: { text: "Detector automático del bot" }
         }]
       });
 
-      lastNewsHash = newHash;
-
     }
 
+    lastStatus = estado;
+
   } catch (error) {
-    console.log("Error revisando Fortnite:", error.message);
+    console.log("Error revisando actualización:", error.message);
   }
 
 }
@@ -74,7 +79,7 @@ client.once('clientReady', () => {
 
   console.log(`✅ Bot conectado como ${client.user.tag}`);
 
-  setInterval(checkFortniteNews, 600000);
+  setInterval(checkFortniteUpdate, 600000);
 
 });
 
@@ -137,7 +142,7 @@ client.on('messageCreate', async message => {
   }
 
   // =========================
-  // 🧪 COMANDO !test (TEST NOTICIA SIN PING)
+  // 🧪 COMANDO !test
   // =========================
 
   if (message.content === "!test") {
