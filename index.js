@@ -150,22 +150,50 @@ client.on('messageCreate', async message => {
 
     try {
 
-      const res = await axios.get(`https://fortnite-api.com/v2/stats/br/v2`, {
-        params: { name: jugador }
-      });
+      let data = null;
+      let plataforma = "";
 
-      if (!res.data.data) {
-        return message.reply("No encontré estadísticas de ese jugador.");
+      const plataformas = [
+        { api: "epic", nombre: "💻 PC" },
+        { api: "psn", nombre: "🎮 PlayStation" },
+        { api: "xbl", nombre: "🟢 Xbox" }
+      ];
+
+      for (const p of plataformas) {
+
+        try {
+
+          const res = await axios.get("https://fortnite-api.com/v2/stats/br/v2", {
+            params: {
+              name: jugador,
+              accountType: p.api
+            }
+          });
+
+          if (res.data && res.data.data) {
+            data = res.data.data;
+            plataforma = p.nombre;
+            break;
+          }
+
+        } catch {}
+
       }
 
-      const data = res.data.data;
+      if (!data) {
+        return message.reply("❌ No encontré ese jugador.");
+      }
+
       const stats = data.stats.all.overall;
 
-      const winrate = ((stats.wins / stats.matches) * 100).toFixed(1);
+      const winrate = stats.matches > 0
+        ? ((stats.wins / stats.matches) * 100).toFixed(1)
+        : "0";
 
-      const avatar = `https://api.dicebear.com/7.x/bottts/png?seed=${jugador}`;
+      const avatar = `https://api.dicebear.com/7.x/bottts/png?seed=${encodeURIComponent(jugador)}`;
 
       await message.channel.send({
+
         embeds: [{
           color: 0x3498DB,
           title: `📊 ${jugador}`,
@@ -173,6 +201,7 @@ client.on('messageCreate', async message => {
 
           description:
           "━━━━━━━━━━━━━━━━━━\n" +
+          `🖥️ **Plataforma:** ${plataforma}\n\n` +
           `🏆 **Victorias:** ${stats.wins}\n\n` +
           `🎮 **Partidas:** ${stats.matches}\n\n` +
           `⚔️ **Kills:** ${stats.kills}\n\n` +
@@ -182,12 +211,15 @@ client.on('messageCreate', async message => {
           "━━━━━━━━━━━━━━━━━━",
 
           footer: { text: "Estadísticas de Fortnite" }
+
         }]
+
       });
 
     } catch (error) {
 
-      message.reply("No pude encontrar ese jugador o los servidores están en mantenimiento.");
+      console.log(error.message);
+      message.reply("⚠️ Error obteniendo estadísticas.");
 
     }
 
@@ -245,12 +277,12 @@ client.on('messageCreate', async message => {
           "`!game nombre`\n" +
           "Información de videojuegos.\n\n" +
 
-          "🎮 **Fortnite**\n" +
+          "🔵 **Fortnite**\n" +
           "`!fortnite jugador`\n" +
-          "Estadísticas del jugador.\n\n" +
+          "Estadísticas del jugador (PC / Xbox / PS).\n\n" +
 
           "`!servidores`\n" +
-          "Estado de servidores.\n\n" +
+          "Estado de servidores de Fortnite.\n\n" +
 
           "⚙️ **Utilidades**\n" +
           "`!cagada mensaje`\n" +
@@ -322,22 +354,7 @@ client.on('messageCreate', async message => {
 
 // 🔐 LOGIN
 
-if (!process.env.TOKEN) {
-  console.log("❌ TOKEN no detectado en el entorno");
-} else {
-  console.log("✅ TOKEN detectado");
-}
-
-console.log("🔄 Intentando iniciar sesión...");
-
-client.login(process.env.TOKEN)
-.then(() => {
-  console.log("✅ Login exitoso");
-})
-.catch(err => {
-  console.error("❌ ERROR AL HACER LOGIN:");
-  console.error(err);
-});
+client.login(process.env.TOKEN);
 
 // 🌐 Servidor web
 
@@ -347,6 +364,4 @@ app.get("/", (req, res) => {
   res.send("Bot activo");
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log("Servidor web activo");
-});
+app.listen(process.env.PORT || 3000);
