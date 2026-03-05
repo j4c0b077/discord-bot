@@ -3,7 +3,6 @@ const express = require("express");
 const axios = require("axios");
 
 const RAWG_KEY = process.env.RAWG_KEY;
-const FORTNITE_API_KEY = process.env.FORTNITE_API_KEY;
 
 const client = new Client({
   intents: [
@@ -137,101 +136,42 @@ client.on('messageCreate', async message => {
     return;
   }
 
- // =========================
-// 🔵 COMANDO !fortnite
-// =========================
+  // =========================
+  // 🧪 COMANDO !test (TEST NOTICIA SIN PING)
+  // =========================
 
-if (message.content.toLowerCase().startsWith("!fortnite")) {
+  if (message.content === "!test") {
 
-  const jugador = message.content.slice(9).trim();
+    try {
 
-  if (!jugador) {
-    return message.reply("Ejemplo: !fortnite Ninja");
-  }
+      const response = await axios.get("https://fortnite-api.com/v2/news");
+      const data = response.data.data.br;
 
-  try {
+      const noticia = data.motds[0];
 
-    let data = null;
-    let plataforma = "";
+      await message.channel.send({
 
-    const plataformas = [
-      { api: "epic", nombre: "💻 PC" },
-      { api: "psn", nombre: "🎮 PlayStation" },
-      { api: "xbl", nombre: "🟢 Xbox" }
-    ];
+        content: "🚨 **Nueva actualización de Fortnite (TEST)**",
 
-    for (const p of plataformas) {
+        embeds: [{
+          color: 0x2ECC71,
+          title: noticia.title,
+          description: noticia.body,
+          image: { url: noticia.image },
+          footer: { text: "Mensaje de prueba del bot" }
+        }]
 
-      try {
+      });
 
-        const res = await axios.get(
-          `https://fortniteapi.io/v1/stats?username=${encodeURIComponent(jugador)}&platform=${p.api}`,
-          {
-            headers: {
-              Authorization: process.env.FORTNITE_API_KEY
-            }
-          }
-        );
+    } catch (error) {
 
-        if (res.data && res.data.global_stats) {
-          data = res.data.global_stats;
-          plataforma = p.nombre;
-          break;
-        }
-
-      } catch (err) {
-        continue;
-      }
+      message.reply("No pude obtener la noticia.");
 
     }
 
-    if (!data) {
-      return message.reply("❌ No encontré ese jugador.");
-    }
-
-    const wins = data.wins;
-    const matches = data.matches;
-    const kills = data.kills;
-    const kd = data.kd;
-
-    const winrate = matches > 0
-      ? ((wins / matches) * 100).toFixed(1)
-      : "0";
-
-    const avatar = `https://api.dicebear.com/7.x/bottts/png?seed=${encodeURIComponent(jugador)}`;
-
-    await message.channel.send({
-
-      embeds: [{
-        color: 0x3498DB,
-        title: `📊 ${jugador}`,
-        thumbnail: { url: avatar },
-
-        description:
-        "━━━━━━━━━━━━━━━━━━\n" +
-        `🖥️ **Plataforma:** ${plataforma}\n\n` +
-        `🏆 **Victorias:** ${wins}\n\n` +
-        `🎮 **Partidas:** ${matches}\n\n` +
-        `⚔️ **Kills:** ${kills}\n\n` +
-        `🎯 **K/D:** ${kd}\n\n` +
-        `📈 **Winrate:** ${winrate}%\n` +
-        "━━━━━━━━━━━━━━━━━━",
-
-        footer: { text: "Estadísticas de Fortnite" }
-
-      }]
-
-    });
-
-  } catch (error) {
-
-    console.log(error.response?.data || error.message);
-    message.reply("⚠️ Error obteniendo estadísticas.");
-
+    return;
   }
 
-  return;
-}
   // =========================
   // 🌐 COMANDO !servidores
   // =========================
@@ -282,10 +222,6 @@ if (message.content.toLowerCase().startsWith("!fortnite")) {
           "🎮 **Juegos**\n" +
           "`!game nombre`\n" +
           "Información de videojuegos.\n\n" +
-
-          "🔵 **Fortnite**\n" +
-          "`!fortnite jugador`\n" +
-          "Estadísticas del jugador.\n\n" +
 
           "`!servidores`\n" +
           "Estado de servidores de Fortnite.\n\n" +
