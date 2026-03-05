@@ -1,5 +1,8 @@
 const { Client, GatewayIntentBits } = require('discord.js');
 const express = require("express");
+const axios = require("axios");
+
+const RAWG_KEY = process.env.RAWG_KEY;
 
 const client = new Client({
   intents: [
@@ -22,7 +25,69 @@ client.once('clientReady', () => {
 client.on('messageCreate', async message => {
   if (message.author.bot) return;
 
-  // ===== COMANDO !cagada (SIN COOLDOWN) =====
+  // =========================
+  // 🎮 COMANDO !game
+  // =========================
+  if (message.content.startsWith("!game")) {
+    const gameName = message.content.slice(5).trim();
+    if (!gameName) return message.reply("Escribe el nombre del juego.");
+
+    try {
+      const response = await axios.get(
+        `https://api.rawg.io/api/games?key=${RAWG_KEY}&search=${encodeURIComponent(gameName)}`
+      );
+
+      if (!response.data.results.length) {
+        return message.reply("No encontré ese juego.");
+      }
+
+      const game = response.data.results[0];
+
+      const plataformas = game.platforms
+        ?.map(p => p.platform.name)
+        .join(", ") || "No disponible";
+
+      const generos = game.genres
+        ?.map(g => g.name)
+        .join(", ") || "No disponible";
+
+      await message.channel.send({
+        embeds: [
+          {
+            color: 0x8A2BE2, // violeta elegante
+            author: {
+              name: message.author.username,
+              icon_url: message.author.displayAvatarURL()
+            },
+            title: `🎮 ${game.name}`,
+            image: {
+              url: game.background_image
+            },
+            description:
+              "━━━━━━━━━━━━━━━━━━\n" +
+              `**Plataformas:** ${plataformas}\n\n` +
+              `**Rating:** ⭐ ${game.rating}\n\n` +
+              `**Lanzamiento:** 📅 ${game.released}\n\n` +
+              `**Géneros:** 🎯 ${generos}\n` +
+              "━━━━━━━━━━━━━━━━━━",
+            footer: {
+              text: "Información obtenida de RAWG"
+            }
+          }
+        ]
+      });
+
+    } catch (error) {
+      console.error(error);
+      message.reply("Hubo un error buscando el juego.");
+    }
+
+    return;
+  }
+
+  // =========================
+  // 💬 COMANDO !cagada
+  // =========================
   const prefijo = "!cagada";
 
   if (message.content.startsWith(prefijo)) {
@@ -44,10 +109,12 @@ client.on('messageCreate', async message => {
       console.error("Error usando webhook:", error);
     }
 
-    return; // 🔥 IMPORTANTE
+    return;
   }
 
-  // ===== SISTEMA POR ROL (CON COOLDOWN DE 1 HORA) =====
+  // =========================
+  // 🔒 SISTEMA POR ROL
+  // =========================
   if (!message.member) return;
   if (!message.member.roles.cache.has(ROL_ID)) return;
 
