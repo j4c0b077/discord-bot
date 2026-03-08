@@ -371,7 +371,13 @@ if (message.content.startsWith("!imagen")) {
 
     const search = await axios.get(`https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`);
 
-    const token = search.data.match(/vqd='(.*?)'/)[1];
+    const tokenMatch = search.data.match(/vqd='(.*?)'/);
+
+if (!tokenMatch) {
+  return message.reply("No pude obtener resultados de imágenes.");
+}
+
+const token = tokenMatch[1];
 
     const res = await axios.get("https://duckduckgo.com/i.js", {
       params: {
