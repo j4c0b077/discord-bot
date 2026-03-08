@@ -140,65 +140,74 @@ client.on('messageCreate', async message => {
 
     return;
   }
-  // =========================
-  // 🍥 COMANDO !anime
-  // =========================
+// =========================
+// 🍥 COMANDO ?anime
+// =========================
 
-  if (message.content.startsWith("!anime")) {
+if (message.content.startsWith("?anime")) {
 
-    const nombre = message.content.slice(6).trim();
+  const nombre = message.content.slice(6).trim();
 
-    if (!nombre) return message.reply("Escribe el nombre de un anime.");
+  if (!nombre) return message.reply("Escribe el nombre de un anime.");
 
-    try {
+  try {
 
-      const res = await axios.get(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(nombre)}&limit=1`);
+    const res = await axios.get(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(nombre)}&limit=1`);
 
-      if (!res.data.data.length) {
-        return message.reply("No encontré ese anime.");
-      }
-
-      const anime = res.data.data[0];
-
-      const generos = anime.genres.map(g => g.name).join(", ") || "No disponible";
-      const estudio = anime.studios?.map(s => s.name).join(", ") || "Desconocido";
-
-      await message.channel.send({
-        embeds: [{
-          color: 0xF1C40F,
-          author: {
-            name: message.author.username,
-            icon_url: message.author.displayAvatarURL()
-          },
-          title: `📀 ${anime.title}`,
-          description:
-            "━━━━━━━━━━━━━━━━━━\n" +
-            `${anime.synopsis?.slice(0, 300) || "Sin descripción."}\n` +
-            "━━━━━━━━━━━━━━━━━━",
-
-          fields: [
-            { name: "⭐ Puntuación", value: anime.score ? `${anime.score}/10` : "N/A", inline: true },
-            { name: "📺 Episodios", value: anime.episodes ? anime.episodes.toString() : "N/A", inline: true },
-            { name: "📅 Año", value: anime.year ? anime.year.toString() : "Desconocido", inline: true },
-            { name: "🎭 Géneros", value: generos, inline: false },
-            { name: "🏢 Estudio", value: estudio, inline: false }
-          ],
-
-          image: { url: anime.images.jpg.large_image_url },
-
-          footer: { text: "Información obtenida de MyAnimeList" }
-        }]
-      });
-
-    } catch (error) {
-
-      console.error(error);
-      message.reply("Error buscando el anime.");
-
+    if (!res.data.data.length) {
+      return message.reply("No encontré ese anime.");
     }
 
-    return;
+    const anime = res.data.data[0];
+
+    const generos = anime.genres.map(g => g.name).join(", ") || "No disponible";
+    const estudio = anime.studios?.map(s => s.name).join(", ") || "Desconocido";
+
+    // Traducción de la sinopsis al español
+    const textoOriginal = anime.synopsis || "Sin descripción.";
+
+    const traduccion = await axios.get(
+      `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=es&dt=t&q=${encodeURIComponent(textoOriginal)}`
+    );
+
+    const sinopsis = traduccion.data[0].map(t => t[0]).join("").slice(0, 300) + "...";
+
+    await message.channel.send({
+      embeds: [{
+        color: 0xF1C40F,
+        author: {
+          name: message.author.username,
+          icon_url: message.author.displayAvatarURL()
+        },
+        title: `📀 ${anime.title}`,
+        description:
+          "━━━━━━━━━━━━━━━━━━\n" +
+          `${sinopsis}\n` +
+          "━━━━━━━━━━━━━━━━━━",
+
+        fields: [
+          { name: "⭐ Puntuación", value: anime.score ? `${anime.score}/10` : "N/A", inline: true },
+          { name: "📺 Episodios", value: anime.episodes ? anime.episodes.toString() : "N/A", inline: true },
+          { name: "📅 Año", value: anime.year ? anime.year.toString() : "Desconocido", inline: true },
+          { name: "🎭 Géneros", value: generos, inline: false },
+          { name: "🏢 Estudio", value: estudio, inline: false }
+        ],
+
+        image: { url: anime.images.jpg.large_image_url },
+
+        footer: { text: "Información obtenida de MyAnimeList" }
+      }]
+    });
+
+  } catch (error) {
+
+    console.error(error);
+    message.reply("Error buscando el anime.");
+
   }
+
+  return;
+}
   // =========================
   // 🧪 COMANDO !test
   // =========================
@@ -266,52 +275,48 @@ client.on('messageCreate', async message => {
   }
 
   // =========================
-  // ❓ COMANDO !ayuda
-  // =========================
+// ❓ COMANDO !ayuda
+// =========================
 
-  if (message.content === "!ayuda") {
+if (message.content === "!ayuda") {
 
-    await message.channel.send({
-      embeds: [{
-        color: 0xE74C3C,
-        author: {
-          name: message.author.username,
-          icon_url: message.author.displayAvatarURL()
-        },
-        title: "📖 Centro de Comandos",
-        description:
-  "━━━━━━━━━━━━━━━━━━\n\n" +
+  await message.channel.send({
+    embeds: [{
+      color: 0xE74C3C,
+      author: {
+        name: message.author.username,
+        icon_url: message.author.displayAvatarURL()
+      },
+      title: "📖 Centro de Comandos",
+      description:
+        "━━━━━━━━━━━━━━━━━━\n\n" +
 
-  "🎮 **Juegos y Anime**\n" +
-  "`!game nombre`\n" +
-  "Información de videojuegos.\n\n" +
+        "🎮 **Juegos y Anime**\n" +
+        "`!game nombre`\n" +
+        "Información de videojuegos.\n\n" +
 
-  "`!anime nombre`\n" +
-  "Información de anime (imagen, géneros, episodios).\n\n" +
+        "`🐸 ?anime nombre`\n" +
+        "Información de anime (imagen, géneros, episodios).\n\n" +
 
-  "`!servidores`\n" +
-  "Estado de servidores de Fortnite.\n\n" +
+        "`!servidores`\n" +
+        "Estado de servidores de Fortnite.\n\n" +
 
-  "⚙️ **Utilidades**\n" +
-  "`!cagada mensaje`\n" +
-  "Enviar mensaje como el bot.\n\n" +
+        "⚙️ **Utilidades**\n" +
+        "`!cagada mensaje`\n" +
+        "Enviar mensaje como el bot.\n\n" +
 
-  "🧪 **Pruebas**\n" +
-  "`!test`\n" +
-  "Mensaje de prueba de actualización de Fortnite.\n\n" +
+        "❓ **Información**\n" +
+        "`!ayuda`\n" +
+        "Lista de comandos.\n\n" +
 
-  "❓ **Información**\n" +
-  "`!ayuda`\n" +
-  "Lista de comandos.\n\n" +
+        "━━━━━━━━━━━━━━━━━━",
 
-  "━━━━━━━━━━━━━━━━━━",
+      footer: { text: "Sistema de ayuda del bot" }
+    }]
+  });
 
-        footer: { text: "Sistema de ayuda del bot" }
-      }]
-    });
-
-    return;
-  }
+  return;
+}
 
   // =========================
   // 💬 COMANDO !cagada
