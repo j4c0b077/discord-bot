@@ -280,24 +280,31 @@ client.on('messageCreate', async message => {
         },
         title: "📖 Centro de Comandos",
         description:
-          "━━━━━━━━━━━━━━━━━━\n\n" +
+  "━━━━━━━━━━━━━━━━━━\n\n" +
 
-          "🎮 **Juegos**\n" +
-          "`!game nombre`\n" +
-          "Información de videojuegos.\n\n" +
+  "🎮 **Juegos y Anime**\n" +
+  "`!game nombre`\n" +
+  "Información de videojuegos.\n\n" +
 
-          "`!servidores`\n" +
-          "Estado de servidores de Fortnite.\n\n" +
+  "`!anime nombre`\n" +
+  "Información de anime (imagen, géneros, episodios).\n\n" +
 
-          "⚙️ **Utilidades**\n" +
-          "`!cagada mensaje`\n" +
-          "Enviar mensaje como el bot.\n\n" +
+  "`!servidores`\n" +
+  "Estado de servidores de Fortnite.\n\n" +
 
-          "❓ **Información**\n" +
-          "`!ayuda`\n" +
-          "Lista de comandos.\n\n" +
+  "⚙️ **Utilidades**\n" +
+  "`!cagada mensaje`\n" +
+  "Enviar mensaje como el bot.\n\n" +
 
-          "━━━━━━━━━━━━━━━━━━",
+  "🧪 **Pruebas**\n" +
+  "`!test`\n" +
+  "Mensaje de prueba de actualización de Fortnite.\n\n" +
+
+  "❓ **Información**\n" +
+  "`!ayuda`\n" +
+  "Lista de comandos.\n\n" +
+
+  "━━━━━━━━━━━━━━━━━━",
 
         footer: { text: "Sistema de ayuda del bot" }
       }]
