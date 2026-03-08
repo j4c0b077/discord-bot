@@ -2,6 +2,9 @@ const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle,
 const express = require("express");
 const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, getVoiceConnection } = require("@discordjs/voice");
+const ytdl = require("ytdl-core");
+const ytSearch = require("yt-search");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
 
@@ -13,12 +16,14 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates
   ]
 });
 
 const ROL_ID = "784521679731687474";
 const cooldown = new Map();
+const player = createAudioPlayer();
 const UNA_HORA = 1 * 60 * 60 * 1000;
 
 // =========================
@@ -90,7 +95,68 @@ client.on("clientReady", () => {
 client.on('messageCreate', async message => {
 
   if (message.author.bot) return;
+// =========================
+// 🎵 MUSICA
+// =========================
 
+if (message.content.startsWith("!play")) {
+
+  const args = message.content.slice(5).trim();
+  if (!args) return message.reply("Escribe una canción.");
+
+  const voiceChannel = message.member.voice.channel;
+  if (!voiceChannel) return message.reply("Debes estar en un canal de voz.");
+
+  try {
+
+    const search = await ytSearch(args);
+    const video = search.videos[0];
+
+    if (!video) return message.reply("No encontré esa canción.");
+
+    const stream = ytdl(video.url, { filter: "audioonly" });
+
+    const connection = joinVoiceChannel({
+      channelId: voiceChannel.id,
+      guildId: message.guild.id,
+      adapterCreator: message.guild.voiceAdapterCreator
+    });
+
+    const resource = createAudioResource(stream);
+
+    player.play(resource);
+    connection.subscribe(player);
+
+    message.channel.send(`🎵 Reproduciendo: **${video.title}**`);
+
+  } catch (err) {
+    console.error(err);
+    message.reply("Error reproduciendo la canción.");
+  }
+
+  return;
+}
+
+if (message.content === "!skip") {
+
+  player.stop();
+  message.channel.send("⏭ Canción saltada.");
+  return;
+
+}
+
+if (message.content === "!stop") {
+
+  const connection = getVoiceConnection(message.guild.id);
+
+  if (connection) connection.destroy();
+
+  player.stop();
+
+  message.channel.send("⏹ Música detenida.");
+  return;
+
+}
   // =========================
   // 🎮 COMANDO !game
   // =========================
@@ -298,6 +364,16 @@ if (message.content === "!ayuda") {
       title: "📖 Centro de Comandos",
       description:
         "━━━━━━━━━━━━━━━━━━\n\n" +
+
+        "🎵 **Música**\n" +
+        "`!play canción`\n" +
+        "Reproduce música desde YouTube.\n\n" +
+
+        "`!skip`\n" +
+        "Salta la canción actual.\n\n" +
+
+        "`!stop`\n" +
+        "Detiene la música y saca al bot del canal de voz.\n\n" +
         
         "🎮 **Videojuegos**\n" +
         "`!game nombre`\n" +
