@@ -140,7 +140,65 @@ client.on('messageCreate', async message => {
 
     return;
   }
+  // =========================
+  // 🍥 COMANDO !anime
+  // =========================
 
+  if (message.content.startsWith("!anime")) {
+
+    const nombre = message.content.slice(6).trim();
+
+    if (!nombre) return message.reply("Escribe el nombre de un anime.");
+
+    try {
+
+      const res = await axios.get(`https://api.jikan.moe/v4/anime?q=${encodeURIComponent(nombre)}&limit=1`);
+
+      if (!res.data.data.length) {
+        return message.reply("No encontré ese anime.");
+      }
+
+      const anime = res.data.data[0];
+
+      const generos = anime.genres.map(g => g.name).join(", ") || "No disponible";
+      const estudio = anime.studios?.map(s => s.name).join(", ") || "Desconocido";
+
+      await message.channel.send({
+        embeds: [{
+          color: 0xF1C40F,
+          author: {
+            name: message.author.username,
+            icon_url: message.author.displayAvatarURL()
+          },
+          title: `📀 ${anime.title}`,
+          description:
+            "━━━━━━━━━━━━━━━━━━\n" +
+            `${anime.synopsis?.slice(0, 300) || "Sin descripción."}\n` +
+            "━━━━━━━━━━━━━━━━━━",
+
+          fields: [
+            { name: "⭐ Puntuación", value: anime.score ? `${anime.score}/10` : "N/A", inline: true },
+            { name: "📺 Episodios", value: anime.episodes ? anime.episodes.toString() : "N/A", inline: true },
+            { name: "📅 Año", value: anime.year ? anime.year.toString() : "Desconocido", inline: true },
+            { name: "🎭 Géneros", value: generos, inline: false },
+            { name: "🏢 Estudio", value: estudio, inline: false }
+          ],
+
+          image: { url: anime.images.jpg.large_image_url },
+
+          footer: { text: "Información obtenida de MyAnimeList" }
+        }]
+      });
+
+    } catch (error) {
+
+      console.error(error);
+      message.reply("Error buscando el anime.");
+
+    }
+
+    return;
+  }
   // =========================
   // 🧪 COMANDO !test
   // =========================
