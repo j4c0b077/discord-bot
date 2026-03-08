@@ -76,7 +76,7 @@ async function checkFortniteUpdate() {
 
 // 🔥 BOT LISTO
 
-client.once('clientReady', () => {
+client.once('ready', () => {
 
   console.log(`✅ Bot conectado como ${client.user.tag}`);
 
@@ -359,59 +359,75 @@ if (message.content === "!ayuda") {
     return;
   }
 // =========================
-// 🖼 COMANDO !imagen (DuckDuckGo)
+// 🖼 COMANDO !imagen
 // =========================
 
 if (message.content.startsWith("!imagen")) {
 
-  const query = message.content.slice(7).trim();
-  if (!query) return message.reply("Escribe algo para buscar.");
+  const query = message.content.slice(6).trim();
+
+  if (!query) {
+    return message.reply("Debes escribir algo para buscar.");
+  }
+
+  const rolesPermitidos = [
+    "852594052762697749",
+    "914766196019195954",
+    "770408711633371206",
+    "749476087641407518"
+  ];
 
   try {
 
-    const search = await axios.get(`https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`);
-
-    const tokenMatch = search.data.match(/vqd='(.*?)'/);
-
-if (!tokenMatch) {
-  return message.reply("No pude obtener resultados de imágenes.");
-}
-
-const token = tokenMatch[1];
-
-    const res = await axios.get("https://duckduckgo.com/i.js", {
-      params: {
-        l: "us-en",
-        o: "json",
-        q: query,
-        vqd: token,
-        f: ",,,",
-        p: "1"
-      },
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-        "Referer": "https://duckduckgo.com/"
+    const search = await axios.get(
+      `https://duckduckgo.com/?q=${encodeURIComponent(query)}&ia=images`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          "Referer": "https://duckduckgo.com/"
+        }
       }
-    });
+    );
 
-    const fotos = res.data.results;
+    const tokenMatch = search.data.match(/vqd=([\d-]+)/);
 
-    if (!fotos.length) return message.reply("No encontré imágenes.");
+    if (!tokenMatch) {
+      return message.reply("No pude obtener resultados de imágenes.");
+    }
+
+    const token = tokenMatch[1];
+
+    const images = await axios.get(
+      "https://duckduckgo.com/i.js",
+      {
+        params: {
+          l: "us-en",
+          o: "json",
+          q: query,
+          vqd: token,
+          f: ",,,",
+          p: "1"
+        },
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          "Referer": "https://duckduckgo.com/"
+        }
+      }
+    );
+
+    const results = images.data.results;
+
+    if (!results.length) {
+      return message.reply("No encontré imágenes.");
+    }
 
     let index = 0;
 
-    const embed = new EmbedBuilder()
-      .setTitle(`🖼 Resultado para: ${query}`)
-      .setImage(fotos[index].image)
-      .setFooter({ text: `Imagen ${index + 1}/${fotos.length}` })
-      .setColor(0xFFA500);
-
-    const botones = new ActionRowBuilder().addComponents(
-
+    const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId("prev")
         .setLabel("⬅️")
-        .setStyle(ButtonStyle.Secondary),
+        .setStyle(ButtonStyle.Primary),
 
       new ButtonBuilder()
         .setCustomId("close")
@@ -421,94 +437,69 @@ const token = tokenMatch[1];
       new ButtonBuilder()
         .setCustomId("next")
         .setLabel("➡️")
-        .setStyle(ButtonStyle.Secondary)
-
+        .setStyle(ButtonStyle.Primary)
     );
+
+    const embed = new EmbedBuilder()
+      .setColor(0xF1C40F)
+      .setTitle(`🖼 Resultado para: ${query}`)
+      .setImage(results[index].image)
+      .setFooter({ text: `Imagen ${index + 1}/${results.length}` });
 
     const msg = await message.channel.send({
       embeds: [embed],
-      components: [botones]
+      components: [row]
     });
 
-    const collector = msg.createMessageComponentCollector({ time: 120000 });
+    const collector = msg.createMessageComponentCollector({
+      time: 120000
+    });
 
     collector.on("collect", async interaction => {
 
-      const rolesPermitidos = [
-        "852594052762697749",
-        "914766196019195954",
-        "770408711633371206",
-        "749476087641407518"
-      ];
-
-      const tieneRol = interaction.member.roles.cache.some(role =>
-        rolesPermitidos.includes(role.id)
-      );
-
-      // BOTÓN CERRAR
       if (interaction.customId === "close") {
 
-        if (interaction.user.id !== message.author.id && !tieneRol) {
+        if (
+          interaction.user.id !== message.author.id &&
+          !interaction.member.roles.cache.some(r => rolesPermitidos.includes(r.id))
+        ) {
           return interaction.reply({
-            content: "No tienes permiso para cerrar esta imagen.",
+            content: "No tienes permiso para cerrar esto.",
             ephemeral: true
           });
         }
 
-        const cerrado = new EmbedBuilder()
-          .setTitle(`🖼 Resultado para: ${query}`)
-          .setImage(fotos[index].image)
-          .setFooter({ text: "🔒 Imagen cerrada" })
-          .setColor(0xFFA500);
-
-        await interaction.update({
-          embeds: [cerrado],
-          components: []
-        });
-
         collector.stop();
-        return;
+        return msg.delete();
       }
 
-      // SOLO AUTOR CAMBIA IMAGEN
       if (interaction.user.id !== message.author.id) {
         return interaction.reply({
-          content: "Solo quien usó el comando puede cambiar la imagen.",
+          content: "Solo quien ejecutó el comando puede cambiar imágenes.",
           ephemeral: true
         });
       }
 
-      if (interaction.customId === "next") {
-        index++;
-        if (index >= fotos.length) index = 0;
-      }
+      if (interaction.customId === "next") index++;
+      if (interaction.customId === "prev") index--;
 
-      if (interaction.customId === "prev") {
-        index--;
-        if (index < 0) index = fotos.length - 1;
-      }
+      if (index < 0) index = results.length - 1;
+      if (index >= results.length) index = 0;
 
-      const nuevoEmbed = new EmbedBuilder()
-        .setTitle(`🖼 Resultado para: ${query}`)
-        .setImage(fotos[index].image)
-        .setFooter({ text: `Imagen ${index + 1}/${fotos.length}` })
-        .setColor(0xFFA500);
+      embed.setImage(results[index].image);
+      embed.setFooter({ text: `Imagen ${index + 1}/${results.length}` });
 
       await interaction.update({
-        embeds: [nuevoEmbed],
-        components: [botones]
+        embeds: [embed],
+        components: [row]
       });
 
     });
 
-  } catch (error) {
-
-    console.error(error);
+  } catch (err) {
+    console.error(err);
     message.reply("Error buscando la imagen.");
-
   }
-
-  return;
 }
   // =========================
   // 🔒 SISTEMA POR ROL
