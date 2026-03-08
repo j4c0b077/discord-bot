@@ -295,14 +295,19 @@ if (message.content.startsWith("!pregunta")) {
 
   try {
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash-latest"
+    });
 
-    const result = await model.generateContent({
-  contents: [{ role: "user", parts: [{ text: pregunta }] }]
-});
+    const result = await model.generateContent(pregunta);
+
     const response = await result.response;
 
     let texto = response.text();
+
+    if (!texto) {
+      return message.reply("❌ La IA no respondió.");
+    }
 
     if (texto.length > 1000) {
       texto = texto.slice(0, 1000) + "...";
@@ -323,7 +328,8 @@ if (message.content.startsWith("!pregunta")) {
 
   } catch (error) {
 
-    console.error(error);
+    console.error("Error IA:", error);
+
     message.reply("❌ Error usando la IA.");
 
   }
