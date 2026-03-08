@@ -1,6 +1,9 @@
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const express = require("express");
 const axios = require("axios");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
 
 const RAWG_KEY = process.env.RAWG_KEY;
 const PEXELS_KEY = process.env.PEXELS_KEY;
@@ -278,7 +281,53 @@ if (sinopsis.length > 300) {
 
     return;
   }
+// =========================
+// 🤖 COMANDO !pregunta
+// =========================
 
+if (message.content.startsWith("!pregunta")) {
+
+  const pregunta = message.content.slice(9).trim();
+
+  if (!pregunta) {
+    return message.reply("❌ Escribe una pregunta.");
+  }
+
+  try {
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const result = await model.generateContent(pregunta);
+    const response = await result.response;
+
+    let texto = response.text();
+
+    if (texto.length > 1000) {
+      texto = texto.slice(0, 1000) + "...";
+    }
+
+    await message.channel.send({
+      embeds: [{
+        color: 0x00AEFF,
+        author: {
+          name: message.author.username,
+          icon_url: message.author.displayAvatarURL()
+        },
+        title: "🤖 Respuesta de la IA",
+        description: texto,
+        footer: { text: "Respuesta generada con IA" }
+      }]
+    });
+
+  } catch (error) {
+
+    console.error(error);
+    message.reply("❌ Error usando la IA.");
+
+  }
+
+  return;
+}
  // =========================
 // ❓ COMANDO !ayuda
 // =========================
@@ -296,27 +345,29 @@ if (message.content === "!ayuda") {
       description:
         "━━━━━━━━━━━━━━━━━━\n\n" +
 
-        "🎮 **Juegos y Anime**\n" +
+        "🤖 **Inteligencia Artificial**\n" +
+        "`!pregunta texto`\n" +
+        "Haz preguntas a la IA.\n\n" +
+
+        "🎮 **Videojuegos**\n" +
         "`!game nombre`\n" +
         "Información de videojuegos.\n\n" +
 
-        "`🐸 ?anime nombre`\n" +
-        "Información de anime (imagen, géneros, episodios).\n\n" +
+        "🍥 **Anime**\n" +
+        "`?anime nombre`\n" +
+        "Información de anime.\n\n" +
 
+        "🌐 **Fortnite**\n" +
         "`!servidores`\n" +
-        "Estado de servidores de Fortnite.\n\n" +
+        "Estado de servidores.\n\n" +
 
         "🖼 **Imágenes**\n" +
         "`!imagen búsqueda`\n" +
-        "Buscar imágenes con botones para avanzar o retroceder.\n\n" +
+        "Buscar imágenes.\n\n" +
 
         "⚙️ **Utilidades**\n" +
         "`!cagada mensaje`\n" +
         "Enviar mensaje como el bot.\n\n" +
-
-        "❓ **Información**\n" +
-        "`!ayuda`\n" +
-        "Lista de comandos.\n\n" +
 
         "━━━━━━━━━━━━━━━━━━",
 
