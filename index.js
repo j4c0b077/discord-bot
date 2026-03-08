@@ -281,61 +281,7 @@ if (sinopsis.length > 300) {
 
     return;
   }
-// =========================
-// 🤖 COMANDO !pregunta
-// =========================
 
-if (message.content.startsWith("!pregunta")) {
-
-  const pregunta = message.content.slice(9).trim();
-
-  if (!pregunta) {
-    return message.reply("❌ Escribe una pregunta.");
-  }
-
-  try {
-
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash"
-    });
-
-    const result = await model.generateContent(pregunta);
-
-    const response = await result.response;
-
-    let texto = response.text();
-
-    if (!texto) {
-      return message.reply("❌ La IA no respondió.");
-    }
-
-    if (texto.length > 1000) {
-      texto = texto.slice(0, 1000) + "...";
-    }
-
-    await message.channel.send({
-      embeds: [{
-        color: 0x00AEFF,
-        author: {
-          name: message.author.username,
-          icon_url: message.author.displayAvatarURL()
-        },
-        title: "🤖 Respuesta de la IA",
-        description: texto,
-        footer: { text: "Respuesta generada con IA" }
-      }]
-    });
-
-  } catch (error) {
-
-    console.error("Error IA:", error);
-
-    message.reply("❌ Error usando la IA.");
-
-  }
-
-  return;
-}
  // =========================
 // ❓ COMANDO !ayuda
 // =========================
@@ -352,11 +298,7 @@ if (message.content === "!ayuda") {
       title: "📖 Centro de Comandos",
       description:
         "━━━━━━━━━━━━━━━━━━\n\n" +
-
-        "🤖 **Inteligencia Artificial**\n" +
-        "`!pregunta texto`\n" +
-        "Haz preguntas a la IA.\n\n" +
-
+        
         "🎮 **Videojuegos**\n" +
         "`!game nombre`\n" +
         "Información de videojuegos.\n\n" +
