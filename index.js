@@ -79,7 +79,7 @@ async function checkFortniteUpdate() {
 
 // 🔥 BOT LISTO
 
-client.once('ready', () => {
+client.on("clientReady", () => {
 
   console.log(`✅ Bot conectado como ${client.user.tag}`);
 
@@ -295,9 +295,11 @@ if (message.content.startsWith("!pregunta")) {
 
   try {
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
-    const result = await model.generateContent(pregunta);
+    const result = await model.generateContent({
+  contents: [{ role: "user", parts: [{ text: pregunta }] }]
+});
     const response = await result.response;
 
     let texto = response.text();
@@ -415,7 +417,7 @@ if (message.content === "!ayuda") {
 
 if (message.content.startsWith("!imagen")) {
 
-  const query = message.content.slice(6).trim();
+  const query = message.content.slice(7).trim();
 
   if (!query) {
     return message.reply("Debes escribir algo para buscar.");
@@ -583,4 +585,6 @@ app.get("/", (req, res) => {
   res.send("Bot activo");
 });
 
-app.listen(process.env.PORT || 3000);
+app.listen(process.env.PORT || 3000, () => {
+  console.log("Servidor web activo");
+});
