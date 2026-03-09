@@ -259,7 +259,7 @@ if (message.content.startsWith("!play")) {
         console.log(`🔄 Connection state: ${oldState.status} -> ${newState.status}`);
       });
 
-      await entersState(connection, VoiceConnectionStatus.Ready, 30000);
+      await entersState(connection, VoiceConnectionStatus.Ready, 45000);
 
       console.log("✅ Conectado al canal de voz");
 
@@ -273,19 +273,26 @@ if (message.content.startsWith("!play")) {
 
       message.channel.send(`🎵 Reproduciendo: **${songInfo.title}**`);
 
-    } catch (err) {
+   } catch (err) {
 
-      console.error("❌ ERROR CONECTANDO AL CANAL");
-      console.error("mensaje:", err.message);
-      console.error("stack:", err.stack);
+  console.error("❌ ERROR CONECTANDO AL CANAL");
+  console.error("mensaje:", err.message);
+  console.error("stack:", err.stack);
 
-      queue.delete(message.guild.id);
+  queue.delete(message.guild.id);
 
-      return message.reply(
-        "❌ Error conectando al canal de voz:\n```" + err.message + "```"
-      );
+  if (err.message === "The operation was aborted") {
+    return message.reply(
+      "⚠️ Discord canceló la conexión al canal de voz.\n" +
+      "Intenta usar **!play otra vez**."
+    );
+  }
 
-    }
+  return message.reply(
+    "❌ Error conectando al canal:\n```" + err.message + "```"
+  );
+
+}
 
   } else {
 
