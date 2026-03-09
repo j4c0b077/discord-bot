@@ -103,7 +103,7 @@ async function checkFortniteUpdate() {
 
 // 🔥 BOT LISTO
 
-client.once("ready", () => {
+client.once("clientReady", () => {
 
   console.log(`✅ Bot conectado como ${client.user.tag}`);
 
@@ -131,9 +131,8 @@ async function playSong(guild, song) {
     });
 
     player.play(resource);
-    serverQueue.connection.subscribe(player);
 
-    player.on(AudioPlayerStatus.Idle, () => {
+    player.once(AudioPlayerStatus.Idle, () => {
       serverQueue.songs.shift();
       playSong(guild, serverQueue.songs[0]);
     });
@@ -226,9 +225,12 @@ if (message.content.startsWith("!play")) {
         adapterCreator: message.guild.voiceAdapterCreator
       });
 
-      await entersState(connection, VoiceConnectionStatus.Ready, 30000);
+      await entersState(connection, VoiceConnectionStatus.Ready, 20000);
 
       queueConstruct.connection = connection;
+
+      // 🔊 conectar el reproductor al canal
+      connection.subscribe(player);
 
       playSong(message.guild, queueConstruct.songs[0]);
 
