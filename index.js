@@ -12,7 +12,9 @@ const {
   entersState,
   VoiceConnectionStatus
 } = require("@discordjs/voice");
-const ytdl = require("ytdl-core");
+
+const play = require("play-dl"); // ✅ NUEVO (reemplaza ytdl)
+
 const ytSearch = require("yt-search");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
@@ -111,46 +113,44 @@ async function playSong(guild, song) {
   const serverQueue = queue.get(guild.id);
 
   if (!song) {
-
     const connection = getVoiceConnection(guild.id);
     if (connection) connection.destroy();
-
     queue.delete(guild.id);
     return;
-
   }
 
- const stream = ytdl(song.url, {
-  filter: "audioonly",
-  quality: "highestaudio",
-  highWaterMark: 1 << 25,
-  requestOptions: {
-    headers: {
-      "User-Agent": "Mozilla/5.0"
-    }
-  }
-});
+  try {
 
-const resource = createAudioResource(stream, {
-  inlineVolume: true
-});
+    const stream = await play.stream(song.url);
 
-player.play(resource);
-serverQueue.connection.subscribe(player);
+    const resource = createAudioResource(stream.stream, {
+      inputType: stream.type,
+      inlineVolume: true
+    });
 
-  player.once(AudioPlayerStatus.Idle, () => {
+    player.play(resource);
+    serverQueue.connection.subscribe(player);
 
+    player.once(AudioPlayerStatus.Idle, () => {
+      serverQueue.songs.shift();
+      playSong(guild, serverQueue.songs[0]);
+    });
+
+  } catch (error) {
+
+    console.error("Error reproduciendo:", error);
     serverQueue.songs.shift();
     playSong(guild, serverQueue.songs[0]);
 
-  });
+  }
 
 }
+
 
 client.on("messageCreate", async message => {
 
   if (message.author.bot) return;
- // PLAY
+// PLAY
 if (message.content.startsWith("!play")) {
 
   const args = message.content.split(" ");
@@ -159,7 +159,7 @@ if (message.content.startsWith("!play")) {
   if (!voiceChannel) return message.reply("Debes entrar a un canal de voz.");
 
   const permissions = voiceChannel.permissionsFor(client.user);
- if (!permissions.has(["Connect", "Speak"]))
+  if (!permissions.has(["Connect", "Speak"]))
     return message.reply("No tengo permisos para unirme.");
 
   const query = args.slice(1).join(" ");
@@ -169,22 +169,24 @@ if (message.content.startsWith("!play")) {
 
   try {
 
-    if (ytdl.validateURL(query)) {
+    if (play.yt_validate(query) === "video") {
+
+      const video = await play.video_info(query);
 
       songInfo = {
-        title: "Canción",
-        url: query
+        title: video.video_details.title,
+        url: video.video_details.url
       };
 
     } else {
 
-      const result = await ytSearch(query);
+      const results = await play.search(query, { limit: 1 });
 
-      if (!result.videos.length) {
+      if (!results.length) {
         return message.reply("No encontré esa canción.");
       }
 
-      const video = result.videos[0];
+      const video = results[0];
 
       songInfo = {
         title: video.title,
@@ -217,14 +219,14 @@ if (message.content.startsWith("!play")) {
     try {
 
       const connection = joinVoiceChannel({
-  channelId: voiceChannel.id,
-  guildId: message.guild.id,
-  adapterCreator: message.guild.voiceAdapterCreator
-});
+        channelId: voiceChannel.id,
+        guildId: message.guild.id,
+        adapterCreator: message.guild.voiceAdapterCreator
+      });
 
-await entersState(connection, VoiceConnectionStatus.Ready, 30000);
+      await entersState(connection, VoiceConnectionStatus.Ready, 30000);
 
-queueConstruct.connection = connection;
+      queueConstruct.connection = connection;
 
       playSong(message.guild, queueConstruct.songs[0]);
 
@@ -232,10 +234,12 @@ queueConstruct.connection = connection;
 
     } catch (err) {
 
+      console.error(err);
       queue.delete(message.guild.id);
       return message.reply("Error al conectar.");
 
     }
+
   } else {
 
     serverQueue.songs.push(songInfo);
