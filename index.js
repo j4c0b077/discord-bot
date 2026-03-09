@@ -15,6 +15,8 @@ const {
 
 const play = require("play-dl"); // ✅ NUEVO (reemplaza ytdl)
 
+const ffmpeg = require("ffmpeg-static");
+
 const ytSearch = require("yt-search");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
@@ -131,7 +133,7 @@ async function playSong(guild, song) {
     player.play(resource);
     serverQueue.connection.subscribe(player);
 
-    player.once(AudioPlayerStatus.Idle, () => {
+    player.on(AudioPlayerStatus.Idle, () => {
       serverQueue.songs.shift();
       playSong(guild, serverQueue.songs[0]);
     });
