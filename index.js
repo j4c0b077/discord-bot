@@ -15,6 +15,12 @@ const {
 
 const play = require("play-dl"); // ✅ NUEVO (reemplaza ytdl)
 
+await play.setToken({
+  youtube: {
+    cookie: process.env.YOUTUBE_COOKIE
+  }
+});
+
 const ffmpeg = require("ffmpeg-static");
 
 const ytSearch = require("yt-search");
@@ -229,7 +235,6 @@ if (message.content.startsWith("!play")) {
 
       queueConstruct.connection = connection;
 
-      // 🔊 conectar el reproductor al canal
       connection.subscribe(player);
 
       playSong(message.guild, queueConstruct.songs[0]);
@@ -253,80 +258,85 @@ if (message.content.startsWith("!play")) {
   }
 
 }
-  // SKIP
-  if (message.content === "!skip") {
 
-    const serverQueue = queue.get(message.guild.id);
-    if (!serverQueue) return message.reply("No hay música.");
 
-    serverQueue.songs.shift();
-    playSong(message.guild, serverQueue.songs[0]);
+// SKIP
+if (message.content === "!skip") {
 
-    message.channel.send("⏭ Canción saltada.");
+  const serverQueue = queue.get(message.guild.id);
+  if (!serverQueue || !serverQueue.songs.length)
+    return message.reply("No hay música.");
 
-  }
+  serverQueue.songs.shift();
 
-  // STOP
-  if (message.content === "!stop") {
+  playSong(message.guild, serverQueue.songs[0]);
 
-    const serverQueue = queue.get(message.guild.id);
-    if (!serverQueue) return message.reply("No hay música.");
+  message.channel.send("⏭ Canción saltada.");
 
-    serverQueue.songs = [];
-    player.stop();
+}
 
-    const connection = getVoiceConnection(message.guild.id);
-    if (connection) connection.destroy();
 
-    queue.delete(message.guild.id);
+// STOP
+if (message.content === "!stop") {
 
-    message.channel.send("⏹ Música detenida.");
+  const serverQueue = queue.get(message.guild.id);
+  if (!serverQueue)
+    return message.reply("No hay música.");
 
-  }
+  serverQueue.songs = [];
 
-  // PAUSE
-  if (message.content === "!pause") {
+  player.stop();
 
-    const serverQueue = queue.get(message.guild.id);
-    if (!serverQueue) return message.reply("No hay música.");
+  const connection = getVoiceConnection(message.guild.id);
+  if (connection) connection.destroy();
 
-    if (player.state.status !== AudioPlayerStatus.Playing)
-      return message.reply("No hay música reproduciéndose.");
+  queue.delete(message.guild.id);
 
-    player.pause();
+  message.channel.send("⏹ Música detenida.");
 
-    message.channel.send("⏸ Música pausada.");
+}
 
-  }
 
-  // RESUME
-  if (message.content === "!resume") {
+// PAUSE
+if (message.content === "!pause") {
 
-    const serverQueue = queue.get(message.guild.id);
-    if (!serverQueue) return message.reply("No hay música.");
+  if (player.state.status !== AudioPlayerStatus.Playing)
+    return message.reply("No hay música reproduciéndose.");
 
-    if (player.state.status !== AudioPlayerStatus.Paused)
-      return message.reply("La música no está pausada.");
+  player.pause();
 
-    player.unpause();
+  message.channel.send("⏸ Música pausada.");
 
-    message.channel.send("▶ Música reanudada.");
+}
 
-  }
 
-  // QUEUE
-  if (message.content === "!queue") {
+// RESUME
+if (message.content === "!resume") {
 
-    const serverQueue = queue.get(message.guild.id);
-    if (!serverQueue) return message.reply("La cola está vacía.");
+  if (player.state.status !== AudioPlayerStatus.Paused)
+    return message.reply("La música no está pausada.");
 
-    const list = serverQueue.songs
-      .map((s, i) => `${i + 1}. ${s.title}`)
-      .join("\n");
-    message.channel.send(`📜 Cola de música:\n${list}`);
+  player.unpause();
 
-  }
+  message.channel.send("▶ Música reanudada.");
 
+}
+
+
+// QUEUE
+if (message.content === "!queue") {
+
+  const serverQueue = queue.get(message.guild.id);
+  if (!serverQueue || !serverQueue.songs.length)
+    return message.reply("La cola está vacía.");
+
+  const list = serverQueue.songs
+    .map((s, i) => `${i + 1}. ${s.title}`)
+    .join("\n");
+
+  message.channel.send(`📜 Cola de música:\n${list}`);
+
+}
   // =========================
   // 🎮 COMANDO !game
   // =========================
