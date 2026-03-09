@@ -15,7 +15,7 @@ const {
 
 const play = require("play-dl"); // ✅ NUEVO (reemplaza ytdl)
 
-await play.setToken({
+ play.setToken({
   youtube: {
     cookie: process.env.YOUTUBE_COOKIE
   }
