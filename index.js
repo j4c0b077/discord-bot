@@ -1,3 +1,5 @@
+process.env.FFMPEG_PATH = require("ffmpeg-static");
+
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const express = require("express");
 const axios = require("axios");
@@ -250,16 +252,35 @@ if (message.content.startsWith("!play")) {
       console.log("🔊 Intentando conectar al canal de voz...");
 
       const connection = joinVoiceChannel({
-        channelId: voiceChannel.id,
-        guildId: message.guild.id,
-        adapterCreator: message.guild.voiceAdapterCreator
-      });
+      channelId: voiceChannel.id,
+      guildId: message.guild.id,
+      adapterCreator: message.guild.voiceAdapterCreator,
+      selfDeaf: false
+        });
 
+        connection.on("stateChange", async (oldState, newState) => {
+
+  if (newState.status === "disconnected") {
+
+    try {
+      await Promise.race([
+        entersState(connection, VoiceConnectionStatus.Signalling, 5000),
+        entersState(connection, VoiceConnectionStatus.Connecting, 5000),
+      ]);
+
+    } catch {
+      console.log("❌ No se pudo reconectar al canal de voz");
+      connection.destroy();
+    }
+
+  }
+
+});
       connection.on("stateChange", (oldState, newState) => {
         console.log(`🔄 Connection state: ${oldState.status} -> ${newState.status}`);
       });
 
-      await entersState(connection, VoiceConnectionStatus.Ready, 45000);
+      await entersState(connection, VoiceConnectionStatus.Ready, 25000);
 
       console.log("✅ Conectado al canal de voz");
 
