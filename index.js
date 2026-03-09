@@ -15,12 +15,6 @@ const {
 
 const play = require("play-dl"); // ✅ NUEVO (reemplaza ytdl)
 
- play.setToken({
-  youtube: {
-    cookie: process.env.YOUTUBE_COOKIE
-  }
-});
-
 const ffmpeg = require("ffmpeg-static");
 
 const ytSearch = require("yt-search");
