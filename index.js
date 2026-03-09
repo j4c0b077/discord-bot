@@ -37,6 +37,26 @@ const client = new Client({
 const ROL_ID = "784521679731687474";
 const cooldown = new Map();
 const player = createAudioPlayer();
+player.on("error", error => {
+
+  console.error("❌ ERROR DEL PLAYER");
+  console.error("mensaje:", error.message);
+  console.error("codigo:", error.code);
+  console.error("stack:", error.stack);
+
+});
+
+player.on(AudioPlayerStatus.Playing, () => {
+  console.log("🎵 El bot empezó a reproducir audio");
+});
+
+player.on(AudioPlayerStatus.Idle, () => {
+  console.log("⏹ El reproductor quedó en Idle");
+});
+
+player.on(AudioPlayerStatus.Buffering, () => {
+  console.log("⏳ El audio está cargando (buffering)");
+});
 
 player.on("error", error => {
   console.error("Error del reproductor:", error.message);
@@ -170,6 +190,8 @@ if (message.content.startsWith("!play")) {
 
   try {
 
+    console.log("🔎 Buscando canción:", query);
+
     if (play.yt_validate(query) === "video") {
 
       const video = await play.video_info(query);
@@ -184,6 +206,7 @@ if (message.content.startsWith("!play")) {
       const results = await play.search(query, { limit: 1 });
 
       if (!results.length) {
+        console.log("⚠️ No se encontraron resultados");
         return message.reply("No encontré esa canción.");
       }
 
@@ -198,8 +221,13 @@ if (message.content.startsWith("!play")) {
 
   } catch (err) {
 
-    console.error(err);
-    return message.reply("Error buscando la canción.");
+    console.error("❌ ERROR BUSCANDO CANCIÓN");
+    console.error("mensaje:", err.message);
+    console.error("stack:", err.stack);
+
+    return message.reply(
+      "❌ Error buscando la canción:\n```" + err.message + "```"
+    );
 
   }
 
@@ -219,17 +247,27 @@ if (message.content.startsWith("!play")) {
 
     try {
 
+      console.log("🔊 Intentando conectar al canal de voz...");
+
       const connection = joinVoiceChannel({
         channelId: voiceChannel.id,
         guildId: message.guild.id,
         adapterCreator: message.guild.voiceAdapterCreator
       });
 
-      await entersState(connection, VoiceConnectionStatus.Ready, 20000);
+      connection.on("stateChange", (oldState, newState) => {
+        console.log(`🔄 Connection state: ${oldState.status} -> ${newState.status}`);
+      });
+
+      await entersState(connection, VoiceConnectionStatus.Ready, 30000);
+
+      console.log("✅ Conectado al canal de voz");
 
       queueConstruct.connection = connection;
 
       connection.subscribe(player);
+
+      console.log("▶️ Iniciando reproducción...");
 
       playSong(message.guild, queueConstruct.songs[0]);
 
@@ -237,9 +275,15 @@ if (message.content.startsWith("!play")) {
 
     } catch (err) {
 
-      console.error(err);
+      console.error("❌ ERROR CONECTANDO AL CANAL");
+      console.error("mensaje:", err.message);
+      console.error("stack:", err.stack);
+
       queue.delete(message.guild.id);
-      return message.reply("Error al conectar.");
+
+      return message.reply(
+        "❌ Error conectando al canal de voz:\n```" + err.message + "```"
+      );
 
     }
 
@@ -247,13 +291,13 @@ if (message.content.startsWith("!play")) {
 
     serverQueue.songs.push(songInfo);
 
+    console.log("📜 Canción añadida a la cola:", songInfo.title);
+
     message.channel.send(`🎶 Añadido a la cola: **${songInfo.title}**`);
 
   }
 
 }
-
-
 // SKIP
 if (message.content === "!skip") {
 
