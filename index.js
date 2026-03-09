@@ -2,7 +2,14 @@ const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle,
 const express = require("express");
 const axios = require("axios");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, getVoiceConnection } = require("@discordjs/voice");
+const { 
+  joinVoiceChannel, 
+  createAudioPlayer, 
+  createAudioResource, 
+  AudioPlayerStatus, 
+  getVoiceConnection,
+  StreamType
+} = require("@discordjs/voice");
 const ytdl = require("ytdl-core");
 const ytSearch = require("yt-search");
 
@@ -24,6 +31,7 @@ const client = new Client({
 const ROL_ID = "784521679731687474";
 const cooldown = new Map();
 const player = createAudioPlayer();
+const queue = new Map();
 const UNA_HORA = 1 * 60 * 60 * 1000;
 
 // =========================
@@ -84,79 +92,219 @@ async function checkFortniteUpdate() {
 
 // 🔥 BOT LISTO
 
-client.on("clientReady", () => {
+client.once("ready", () => {
 
   console.log(`✅ Bot conectado como ${client.user.tag}`);
 
   setInterval(checkFortniteUpdate, 600000);
 
 });
+async function playSong(guild, song) {
 
-client.on('messageCreate', async message => {
+  const serverQueue = queue.get(guild.id);
+
+  if (!song) {
+
+    const connection = getVoiceConnection(guild.id);
+    if (connection) connection.destroy();
+
+    queue.delete(guild.id);
+    return;
+
+  }
+
+ const stream = ytdl(song.url, {
+  filter: "audioonly",
+  quality: "highestaudio",
+  highWaterMark: 1 << 25
+});
+
+const resource = createAudioResource(stream, {
+  inputType: StreamType.Arbitrary
+});
+
+player.play(resource);
+serverQueue.connection.subscribe(player);
+
+  player.once(AudioPlayerStatus.Idle, () => {
+
+    serverQueue.songs.shift();
+    playSong(guild, serverQueue.songs[0]);
+
+  });
+
+}
+
+client.on("messageCreate", async message => {
 
   if (message.author.bot) return;
-// =========================
-// 🎵 MUSICA
-// =========================
-
+ // PLAY
 if (message.content.startsWith("!play")) {
 
-  const args = message.content.slice(5).trim();
-  if (!args) return message.reply("Escribe una canción.");
-
+  const args = message.content.split(" ");
   const voiceChannel = message.member.voice.channel;
-  if (!voiceChannel) return message.reply("Debes estar en un canal de voz.");
+
+  if (!voiceChannel) return message.reply("Debes entrar a un canal de voz.");
+
+  const permissions = voiceChannel.permissionsFor(client.user);
+  if (!permissions.has("Connect") || !permissions.has("Speak"))
+    return message.reply("No tengo permisos para unirme.");
+
+  const query = args.slice(1).join(" ");
+  if (!query) return message.reply("Debes escribir un link o nombre de canción.");
+
+  let songInfo;
 
   try {
 
-    const search = await ytSearch(args);
-    const video = search.videos[0];
+    if (ytdl.validateURL(query)) {
 
-    if (!video) return message.reply("No encontré esa canción.");
+      songInfo = {
+        title: "Canción",
+        url: query
+      };
 
-    const stream = ytdl(video.url, { filter: "audioonly" });
+    } else {
 
-    const connection = joinVoiceChannel({
-      channelId: voiceChannel.id,
-      guildId: message.guild.id,
-      adapterCreator: message.guild.voiceAdapterCreator
-    });
+      const result = await ytSearch(query);
 
-    const resource = createAudioResource(stream);
+      if (!result.videos.length) {
+        return message.reply("No encontré esa canción.");
+      }
 
-    player.play(resource);
-    connection.subscribe(player);
+      const video = result.videos[0];
 
-    message.channel.send(`🎵 Reproduciendo: **${video.title}**`);
+      songInfo = {
+        title: video.title,
+        url: video.url
+      };
+
+    }
 
   } catch (err) {
+
     console.error(err);
-    message.reply("Error reproduciendo la canción.");
+    return message.reply("Error buscando la canción.");
+
   }
 
-  return;
+  let serverQueue = queue.get(message.guild.id);
+
+  if (!serverQueue) {
+
+    const queueConstruct = {
+      textChannel: message.channel,
+      voiceChannel: voiceChannel,
+      connection: null,
+      songs: []
+    };
+
+    queue.set(message.guild.id, queueConstruct);
+    queueConstruct.songs.push(songInfo);
+
+    try {
+
+      const connection = joinVoiceChannel({
+        channelId: voiceChannel.id,
+        guildId: message.guild.id,
+        adapterCreator: message.guild.voiceAdapterCreator
+      });
+
+      queueConstruct.connection = connection;
+
+      playSong(message.guild, queueConstruct.songs[0]);
+
+      message.channel.send(`🎵 Reproduciendo: **${songInfo.title}**`);
+
+    } catch (err) {
+
+      queue.delete(message.guild.id);
+      return message.reply("Error al conectar.");
+
+    }
+  } else {
+
+    serverQueue.songs.push(songInfo);
+
+    message.channel.send(`🎶 Añadido a la cola: **${songInfo.title}**`);
+
+  }
+
 }
+  // SKIP
+  if (message.content === "!skip") {
 
-if (message.content === "!skip") {
+    const serverQueue = queue.get(message.guild.id);
+    if (!serverQueue) return message.reply("No hay música.");
 
-  player.stop();
-  message.channel.send("⏭ Canción saltada.");
-  return;
+    serverQueue.songs.shift();
+    playSong(message.guild, serverQueue.songs[0]);
 
-}
+    message.channel.send("⏭ Canción saltada.");
 
-if (message.content === "!stop") {
+  }
 
-  const connection = getVoiceConnection(message.guild.id);
+  // STOP
+  if (message.content === "!stop") {
 
-  if (connection) connection.destroy();
+    const serverQueue = queue.get(message.guild.id);
+    if (!serverQueue) return message.reply("No hay música.");
 
-  player.stop();
+    serverQueue.songs = [];
+    player.stop();
 
-  message.channel.send("⏹ Música detenida.");
-  return;
+    const connection = getVoiceConnection(message.guild.id);
+    if (connection) connection.destroy();
 
-}
+    queue.delete(message.guild.id);
+
+    message.channel.send("⏹ Música detenida.");
+
+  }
+
+  // PAUSE
+  if (message.content === "!pause") {
+
+    const serverQueue = queue.get(message.guild.id);
+    if (!serverQueue) return message.reply("No hay música.");
+
+    if (player.state.status !== AudioPlayerStatus.Playing)
+      return message.reply("No hay música reproduciéndose.");
+
+    player.pause();
+
+    message.channel.send("⏸ Música pausada.");
+
+  }
+
+  // RESUME
+  if (message.content === "!resume") {
+
+    const serverQueue = queue.get(message.guild.id);
+    if (!serverQueue) return message.reply("No hay música.");
+
+    if (player.state.status !== AudioPlayerStatus.Paused)
+      return message.reply("La música no está pausada.");
+
+    player.unpause();
+
+    message.channel.send("▶ Música reanudada.");
+
+  }
+
+  // QUEUE
+  if (message.content === "!queue") {
+
+    const serverQueue = queue.get(message.guild.id);
+    if (!serverQueue) return message.reply("La cola está vacía.");
+
+    const list = serverQueue.songs
+      .map((s, i) => `${i + 1}. ${s.title}`)
+      .join("\n");
+    message.channel.send(`📜 Cola de música:\n${list}`);
+
+  }
+
   // =========================
   // 🎮 COMANDO !game
   // =========================
@@ -372,9 +520,18 @@ if (message.content === "!ayuda") {
         "`!skip`\n" +
         "Salta la canción actual.\n\n" +
 
+        "`!pause`\n" +
+        "Pausa la música.\n\n" +
+
+        "`!resume`\n" +
+        "Reanuda la música pausada.\n\n" +
+
+        "`!queue`\n" +
+        "Muestra la cola de canciones.\n\n" +
+
         "`!stop`\n" +
         "Detiene la música y saca al bot del canal de voz.\n\n" +
-        
+
         "🎮 **Videojuegos**\n" +
         "`!game nombre`\n" +
         "Información de videojuegos.\n\n" +
@@ -403,7 +560,6 @@ if (message.content === "!ayuda") {
 
   return;
 }
-
   // =========================
   // 💬 COMANDO !cagada
   // =========================
