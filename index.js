@@ -8,7 +8,9 @@ const {
   createAudioResource, 
   AudioPlayerStatus, 
   getVoiceConnection,
-  StreamType
+  StreamType,
+  entersState,
+  VoiceConnectionStatus
 } = require("@discordjs/voice");
 const ytdl = require("ytdl-core");
 const ytSearch = require("yt-search");
@@ -31,6 +33,11 @@ const client = new Client({
 const ROL_ID = "784521679731687474";
 const cooldown = new Map();
 const player = createAudioPlayer();
+
+player.on("error", error => {
+  console.error("Error del reproductor:", error.message);
+});
+
 const queue = new Map();
 const UNA_HORA = 1 * 60 * 60 * 1000;
 
@@ -116,11 +123,16 @@ async function playSong(guild, song) {
  const stream = ytdl(song.url, {
   filter: "audioonly",
   quality: "highestaudio",
-  highWaterMark: 1 << 25
+  highWaterMark: 1 << 25,
+  requestOptions: {
+    headers: {
+      "User-Agent": "Mozilla/5.0"
+    }
+  }
 });
 
 const resource = createAudioResource(stream, {
-  inputType: StreamType.Arbitrary
+  inlineVolume: true
 });
 
 player.play(resource);
@@ -147,7 +159,7 @@ if (message.content.startsWith("!play")) {
   if (!voiceChannel) return message.reply("Debes entrar a un canal de voz.");
 
   const permissions = voiceChannel.permissionsFor(client.user);
-  if (!permissions.has("Connect") || !permissions.has("Speak"))
+ if (!permissions.has(["Connect", "Speak"]))
     return message.reply("No tengo permisos para unirme.");
 
   const query = args.slice(1).join(" ");
@@ -205,12 +217,14 @@ if (message.content.startsWith("!play")) {
     try {
 
       const connection = joinVoiceChannel({
-        channelId: voiceChannel.id,
-        guildId: message.guild.id,
-        adapterCreator: message.guild.voiceAdapterCreator
-      });
+  channelId: voiceChannel.id,
+  guildId: message.guild.id,
+  adapterCreator: message.guild.voiceAdapterCreator
+});
 
-      queueConstruct.connection = connection;
+await entersState(connection, VoiceConnectionStatus.Ready, 30000);
+
+queueConstruct.connection = connection;
 
       playSong(message.guild, queueConstruct.songs[0]);
 
