@@ -45,7 +45,6 @@ client.once("clientReady", () => {
 
   console.log(`✅ Bot conectado como ${client.user.tag}`);
 
-  // ⏰ MENSAJE CADA 8 HORAS
   const CANAL_ID = "750455777889878046";
 
   setInterval(() => {
@@ -95,6 +94,23 @@ client.on("messageCreate", async message => {
 
   if (message.author.bot) return;
 
+  // 🔥 NUEVA FUNCIÓN (LA QUE PEDISTE)
+  if (
+    message.author.id === "738942627876962304" &&
+    message.content.toLowerCase() === "yats gay activado"
+  ) {
+    try {
+      const miembro = await message.guild.members.fetch("1059985843395235991");
+
+      await miembro.setNickname("pasiva de medusa");
+
+      message.channel.send("😈 Apodo cambiado correctamente.");
+    } catch (error) {
+      console.error(error);
+      message.channel.send("❌ No pude cambiar el apodo.");
+    }
+  }
+
   // 🎮 !game
   if (message.content.startsWith("!game")) {
 
@@ -128,6 +144,8 @@ client.on("messageCreate", async message => {
 
     return;
   }
+
+  // (resto de tu código sin cambios...)
 
   // 🍥 ?anime
   if (message.content.startsWith("?anime")) {
