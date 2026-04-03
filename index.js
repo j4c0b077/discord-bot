@@ -263,7 +263,7 @@ if (message.content.startsWith("!imagen")) {
 if (message.content === "!ayuda") {
 
   const embed = new EmbedBuilder()
-    .setColor(0x2b2d31)
+    .setColor(0xFF0000)
     .setTitle("📖 Centro de Comandos")
     .setDescription("────────────────────\n\n" +
 
