@@ -157,84 +157,141 @@ client.on("messageCreate", async message => {
     return;
   }
 
-  // 🖼 !imagen
-  if (message.content.startsWith("!imagen")) {
+ // 🖼 !imagen
+if (message.content.startsWith("!imagen")) {
 
-    const query = message.content.slice(7).trim();
-    if (!query) return message.reply("Debes escribir algo.");
+  const query = message.content.slice(7).trim();
+  if (!query) return message.reply("Debes escribir algo.");
 
-    try {
+  try {
 
-      const search = await axios.get(
-        `https://duckduckgo.com/?q=${encodeURIComponent(query)}&ia=images`,
-        { headers: { "User-Agent": "Mozilla/5.0" } }
-      );
+    const search = await axios.get(
+      `https://duckduckgo.com/?q=${encodeURIComponent(query)}&ia=images`,
+      { headers: { "User-Agent": "Mozilla/5.0" } }
+    );
 
-      const tokenMatch = search.data.match(/vqd=([\d-]+)/);
-      if (!tokenMatch) return message.reply("Error buscando imágenes.");
+    const tokenMatch = search.data.match(/vqd=([\d-]+)/);
+    if (!tokenMatch) return message.reply("Error buscando imágenes.");
 
-      const images = await axios.get("https://duckduckgo.com/i.js", {
-        params: { q: query, vqd: tokenMatch[1], o: "json" },
-        headers: { "User-Agent": "Mozilla/5.0" }
-      });
-
-      const results = images.data.results;
-      if (!results.length) return message.reply("No encontré imágenes.");
-
-      let index = 0;
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId("prev").setLabel("⬅️").setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId("next").setLabel("➡️").setStyle(ButtonStyle.Primary)
-      );
-
-      const embed = new EmbedBuilder()
-        .setTitle(`🖼 ${query}`)
-        .setImage(results[index].image);
-
-      const msg = await message.channel.send({ embeds: [embed], components: [row] });
-
-      const collector = msg.createMessageComponentCollector({ time: 120000 });
-
-      collector.on("collect", async interaction => {
-
-        if (interaction.user.id !== message.author.id) return;
-
-        if (interaction.customId === "next") index++;
-        if (interaction.customId === "prev") index--;
-
-        if (index < 0) index = results.length - 1;
-        if (index >= results.length) index = 0;
-
-        embed.setImage(results[index].image);
-
-        await interaction.update({ embeds: [embed], components: [row] });
-
-      });
-
-    } catch {
-      message.reply("Error buscando imagen.");
-    }
-
-    return;
-  }
-
-  // ❓ !ayuda
-  if (message.content === "!ayuda") {
-
-    await message.channel.send({
-      embeds: [{
-        title: "📖 Comandos",
-        description:
-          "`!game nombre`\n" +
-          "`?anime nombre`\n" +
-          "`!imagen búsqueda`\n" +
-          "`!cagada mensaje`"
-      }]
+    const images = await axios.get("https://duckduckgo.com/i.js", {
+      params: { q: query, vqd: tokenMatch[1], o: "json" },
+      headers: { "User-Agent": "Mozilla/5.0" }
     });
 
-    return;
+    const results = images.data.results;
+    if (!results.length) return message.reply("No encontré imágenes.");
+
+    let index = 0;
+
+    const rolesPermitidos = [
+      "770408711633371206",
+      "914766196019195954",
+      "749476087641407518"
+    ];
+
+    const usuarioPermitido = "738942627876962304";
+
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId("prev").setLabel("⬅️").setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId("delete").setLabel("❌").setStyle(ButtonStyle.Danger),
+      new ButtonBuilder().setCustomId("next").setLabel("➡️").setStyle(ButtonStyle.Primary)
+    );
+
+    const embed = new EmbedBuilder()
+      .setTitle(`🖼 ${query}`)
+      .setImage(results[index].image);
+
+    const msg = await message.channel.send({ embeds: [embed], components: [row] });
+
+    const collector = msg.createMessageComponentCollector({ time: 120000 });
+
+    collector.on("collect", async interaction => {
+
+      const member = interaction.member;
+
+      const tieneRol = member.roles.cache.some(r => rolesPermitidos.includes(r.id));
+      const esAutor = interaction.user.id === message.author.id;
+      const esUsuarioEspecial = interaction.user.id === usuarioPermitido;
+
+      // 🔒 Validación para eliminar
+      if (interaction.customId === "delete") {
+
+        if (!esAutor && !tieneRol && !esUsuarioEspecial) {
+          return interaction.reply({
+            content: "❌ No puedes borrar esta imagen.",
+            ephemeral: true
+          });
+        }
+
+        collector.stop();
+
+        return interaction.update({
+          content: "🗑 Imagen eliminada",
+          embeds: [],
+          components: []
+        });
+      }
+
+      // 🔁 Navegación
+      if (interaction.user.id !== message.author.id) {
+        return interaction.reply({
+          content: "❌ Solo el que pidió la imagen puede usar las flechas.",
+          ephemeral: true
+        });
+      }
+
+      if (interaction.customId === "next") index++;
+      if (interaction.customId === "prev") index--;
+
+      if (index < 0) index = results.length - 1;
+      if (index >= results.length) index = 0;
+
+      embed.setImage(results[index].image);
+
+      await interaction.update({ embeds: [embed], components: [row] });
+
+    });
+
+  } catch {
+    message.reply("Error buscando imagen.");
   }
+
+  return;
+}
+
+// ❓ !ayuda
+if (message.content === "!ayuda") {
+
+  const embed = new EmbedBuilder()
+    .setColor(0x2b2d31)
+    .setTitle("📖 Centro de Comandos")
+    .setDescription("────────────────────\n\n" +
+
+      "🎮 **Videojuegos**\n" +
+      "`!game nombre`\n" +
+      "Información de videojuegos.\n\n" +
+
+      "🍥 **Anime**\n" +
+      "`?anime nombre`\n" +
+      "Información de anime.\n\n" +
+
+      "🖼 **Imágenes**\n" +
+      "`!imagen búsqueda`\n" +
+      "Buscar imágenes.\n\n" +
+
+      "⚙️ **Utilidades**\n" +
+      "`!cagada mensaje`\n" +
+      "Enviar mensaje como el bot.\n\n" +
+
+      "────────────────────\n" +
+      "*Sistema de ayuda del bot*"
+    )
+    .setFooter({ text: message.author.username, iconURL: message.author.displayAvatarURL() });
+
+  await message.channel.send({ embeds: [embed] });
+
+  return;
+}
 
   // 💬 !cagada
   if (message.content.startsWith("!cagada")) {
