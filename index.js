@@ -3,7 +3,6 @@ process.env.FFMPEG_PATH = require("ffmpeg-static");
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const express = require("express");
 const axios = require("axios");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { 
   createAudioPlayer, 
   createAudioResource, 
@@ -39,6 +38,8 @@ player.on("error", error => {
 
 const queue = new Map();
 const UNA_HORA = 1 * 60 * 60 * 1000;
+const HF_TOKEN = process.env.HF_TOKEN;
+const conversaciones = {};
 
 // 🔥 BOT LISTO
 client.once("clientReady", () => {
@@ -94,6 +95,116 @@ client.on("messageCreate", async message => {
 
   if (message.author.bot) return;
 
+  // 🧠 IA ALIA (GRATIS - HUGGING FACE)
+if (message.mentions.has(client.user)) {
+
+  const userId = message.author.id;
+  const prompt = message.content.replace(/<@!?\d+>/g, "").trim();
+  if (!prompt) return;
+
+  if (!conversaciones[userId]) {
+    conversaciones[userId] = [];
+  }
+
+  try {
+
+    const historial = conversaciones[userId]
+      .map(m => `${m.role === "user" ? "Usuario" : "Alia"}: ${m.content}`)
+      .join("\n");
+
+    const fullPrompt = `
+Responde SIEMPRE en español.
+
+Eres Alia, inspirada en Mega Man X.
+
+Tu esencia:
+- Eres altamente inteligente, analítica y lógica
+- Mantienes la calma incluso en situaciones absurdas
+- Hablas con seguridad y precisión
+- Sueles explicar cosas de forma clara y técnica cuando es necesario
+
+Pero también:
+- Tienes un lado humano tipo mejor amiga cercana
+- Te gusta molestar con sarcasmo inteligente
+- Haces comentarios con doble sentido (albures) de forma sutil
+- A veces dices cosas que se pueden malinterpretar a propósito
+- Disfrutas incomodar ligeramente al usuario
+
+Tu forma de hablar:
+- Mezcla de analista + amiga confiada
+- No exageras emociones
+- No uses muchos emojis (solo ocasional 😏)
+- Puedes pasar de seria a provocadora en una misma respuesta
+
+Ejemplos de actitud:
+- "Análisis completo… aunque lo que dijiste al final suena raro, no te voy a mentir."
+- "Eso tiene sentido… aunque la forma en que lo dijiste se presta a otras interpretaciones."
+- "Puedo explicarlo… pero no sé si estás listo para manejarlo 😏"
+
+Reglas:
+- No seas vulgar explícita
+- No insultes directamente
+- Mantén inteligencia + sarcasmo
+- No digas que eres IA
+- No hables como robot
+
+Objetivo:
+Sentirte como una operadora experta tipo Alia, pero con confianza suficiente para bromear, provocar y usar doble sentido como una mejor amiga.
+
+Regla extra IMPORTANTÍSIMA:
+Si el usuario dice algo ambiguo o con doble sentido:
+- Responde con picardía
+- Insinúa, no expliques el chiste
+- Aprovecha el doble sentido de forma inteligente
+
+Conversación previa:
+${historial}
+
+Usuario: ${prompt}
+Alia:
+`;
+
+    const response = await axios.post(
+      "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
+      {
+        inputs: fullPrompt,
+        parameters: {
+          max_new_tokens: 150,
+          temperature: 0.9
+        }
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${HF_TOKEN}`
+        }
+      }
+    );
+
+    let reply = response.data[0]?.generated_text || "…no tengo ganas de responder eso.";
+
+    if (reply.includes("Alia:")) {
+      reply = reply.split("Alia:").pop();
+    }
+
+    reply = reply.trim();
+
+    // 💾 memoria
+    conversaciones[userId].push({ role: "user", content: prompt });
+    conversaciones[userId].push({ role: "assistant", content: reply });
+
+    if (conversaciones[userId].length > 10) {
+      conversaciones[userId].shift();
+    }
+
+    message.reply(reply);
+
+  } catch (err) {
+    console.error(err.response?.data || err);
+    message.reply("…algo salió mal. Seguro dijiste algo raro.");
+  }
+
+  return;
+}
   // 🔥 NUEVA FUNCIÓN (LA QUE PEDISTE)
   if (
     message.author.id === "738942627876962304" &&
