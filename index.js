@@ -14,8 +14,6 @@ const play = require("play-dl");
 const ffmpeg = require("ffmpeg-static");
 const ytSearch = require("yt-search");
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_KEY);
-
 const RAWG_KEY = process.env.RAWG_KEY;
 
 const client = new Client({
