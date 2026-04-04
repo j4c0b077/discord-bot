@@ -163,7 +163,7 @@ Alia:
 `;
 
     const response = await axios.post(
-  "https://router.huggingface.co/hf-inference/models/HuggingFaceH4/zephyr-7b-beta",
+  "https://router.huggingface.co/hf-inference/models/google/flan-t5-large",
   {
     inputs: fullPrompt
   },
