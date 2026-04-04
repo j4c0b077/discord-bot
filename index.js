@@ -163,27 +163,18 @@ Alia:
 `;
 
  const response = await axios.post(
-  "https://router.huggingface.co/v1/chat/completions",
+  "https://api-inference.huggingface.co/models/google/flan-t5-large",
   {
-    model: "tiiuae/falcon-7b-instruct",
-    messages: [
-      {
-        role: "user",
-        content: fullPrompt
-      }
-    ],
-    max_tokens: 150,
-    temperature: 0.9
+    inputs: fullPrompt
   },
   {
     headers: {
-      Authorization: `Bearer ${HF_TOKEN}`,
-      "Content-Type": "application/json"
+      Authorization: `Bearer ${HF_TOKEN}`
     }
   }
 );
 
-let reply = response.data?.choices?.[0]?.message?.content;
+let reply = response.data[0]?.generated_text;
 
 if (!reply) {
   console.log("Respuesta rara:", response.data);
