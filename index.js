@@ -163,7 +163,7 @@ Alia:
 `;
 
     const response = await axios.post(
-      "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
+      "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta",
       {
         inputs: fullPrompt,
         parameters: {
@@ -178,7 +178,7 @@ Alia:
       }
     );
 
-    let reply = response.data[0]?.generated_text || "…no tengo ganas de responder eso.";
+    let reply = response.data?.[0]?.generated_text || "No tengo nada que decir… qué raro.";
 
     if (reply.includes("Alia:")) {
       reply = reply.split("Alia:").pop();
@@ -196,10 +196,12 @@ Alia:
 
     message.reply(reply);
 
-  } catch (err) {
-    console.error(err.response?.data || err);
-    message.reply("…algo salió mal. Seguro dijiste algo raro.");
-  }
+  } 
+  
+  catch (err) {
+  console.error("ERROR REAL:", err.response?.data || err.message || err);
+  message.reply("…algo salió mal. Seguro dijiste algo raro.");
+}
 
   return;
 }
