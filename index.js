@@ -161,31 +161,35 @@ ${historial}
 Usuario: ${prompt}
 Alia:
 `;
-
- const response = await axios.post(
-  "https://api-inference.huggingface.co/models/google/flan-t5-large",
+const response = await axios.post(
+  "https://router.huggingface.co/v1/chat/completions",
   {
-    inputs: fullPrompt
+    model: "tiiuae/falcon-7b-instruct",
+    messages: [
+      {
+        role: "user",
+        content: fullPrompt
+      }
+    ],
+    max_tokens: 150,
+    temperature: 0.9
   },
   {
     headers: {
-      Authorization: `Bearer ${HF_TOKEN}`
+      Authorization: `Bearer ${HF_TOKEN}`,
+      "Content-Type": "application/json"
     }
   }
 );
 
-let reply = response.data[0]?.generated_text;
+let reply = response.data?.choices?.[0]?.message?.content;
 
 if (!reply) {
   console.log("Respuesta rara:", response.data);
   reply = "…no tengo ganas de responder eso.";
 }
 
-reply = reply.trim();
-
-reply = reply.trim();
-reply = reply.trim();
-
+reply = reply.trim(); 
     // 💾 memoria
     conversaciones[userId].push({ role: "user", content: prompt });
     conversaciones[userId].push({ role: "assistant", content: reply });
