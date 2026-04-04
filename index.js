@@ -162,10 +162,10 @@ Usuario: ${prompt}
 Alia:
 `;
 
-  const response = await axios.post(
+ const response = await axios.post(
   "https://router.huggingface.co/v1/chat/completions",
   {
-    model: "meta-llama/Llama-3-8b-chat-hf",
+    model: "HuggingFaceH4/zephyr-7b-beta",
     messages: [
       {
         role: "user",
@@ -189,6 +189,8 @@ if (!reply) {
   console.log("Respuesta rara:", response.data);
   reply = "…no tengo ganas de responder eso.";
 }
+
+reply = reply.trim();
 
 reply = reply.trim();
 reply = reply.trim();
