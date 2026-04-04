@@ -165,7 +165,7 @@ Alia:
  const response = await axios.post(
   "https://router.huggingface.co/v1/chat/completions",
   {
-    model: "HuggingFaceH4/zephyr-7b-beta",
+    model: "tiiuae/falcon-7b-instruct",
     messages: [
       {
         role: "user",
