@@ -163,26 +163,25 @@ Alia:
 `;
 
     const response = await axios.post(
-      "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta",
-      {
-        inputs: fullPrompt,
-        parameters: {
-          max_new_tokens: 150,
-          temperature: 0.9
-        }
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`
-        }
-      }
-    );
-
-    let reply = response.data?.[0]?.generated_text || "No tengo nada que decir… qué raro.";
-
-    if (reply.includes("Alia:")) {
-      reply = reply.split("Alia:").pop();
+  "https://router.huggingface.co/hf-inference/models/HuggingFaceH4/zephyr-7b-beta",
+  {
+    inputs: fullPrompt
+  },
+  {
+    headers: {
+      Authorization: `Bearer ${HF_TOKEN}`,
+      "Content-Type": "application/json"
     }
+  }
+);
+
+let reply = "No respondió… qué raro.";
+
+if (Array.isArray(response.data)) {
+  reply = response.data[0]?.generated_text || reply;
+} else if (response.data?.generated_text) {
+  reply = response.data.generated_text;
+}
 
     reply = reply.trim();
 
