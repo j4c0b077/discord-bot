@@ -162,10 +162,18 @@ Usuario: ${prompt}
 Alia:
 `;
 
-    const response = await axios.post(
-  "https://router.huggingface.co/hf-inference/models/google/flan-t5-large",
+  const response = await axios.post(
+  "https://router.huggingface.co/v1/chat/completions",
   {
-    inputs: fullPrompt
+    model: "meta-llama/Llama-3-8b-chat-hf",
+    messages: [
+      {
+        role: "user",
+        content: fullPrompt
+      }
+    ],
+    max_tokens: 150,
+    temperature: 0.9
   },
   {
     headers: {
@@ -175,15 +183,15 @@ Alia:
   }
 );
 
-let reply = "No respondió… qué raro.";
+let reply = response.data?.choices?.[0]?.message?.content;
 
-if (Array.isArray(response.data)) {
-  reply = response.data[0]?.generated_text || reply;
-} else if (response.data?.generated_text) {
-  reply = response.data.generated_text;
+if (!reply) {
+  console.log("Respuesta rara:", response.data);
+  reply = "…no tengo ganas de responder eso.";
 }
 
-    reply = reply.trim();
+reply = reply.trim();
+reply = reply.trim();
 
     // 💾 memoria
     conversaciones[userId].push({ role: "user", content: prompt });
